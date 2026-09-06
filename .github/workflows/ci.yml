@@ -47,3 +47,5 @@ jobs:
           fetch-depth: 0 # need main's history for the merge-base diff
       - name: Every new spec folder has spec.md + architecture.md + plan.md
         run: bash scripts/check-specs-complete.sh
+      - name: Every spec folder has a row in the index
+        run: bash scripts/check-specs-index.sh

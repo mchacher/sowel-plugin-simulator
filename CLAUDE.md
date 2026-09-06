@@ -15,6 +15,7 @@ Uses: the public showroom, the docs screenshot pipeline, testing recipes without
 | Why this exists, the decisions, the phases | [sowel-showroom/docs/project-map.md](https://github.com/mchacher/sowel-showroom/blob/main/docs/project-map.md) |
 | How Sowel loads and isolates a plugin      | `mchacher/sowel`: `docs/technical/plugin-development.md`, `src/plugins/scoped-deps.ts` (spec 111)              |
 | The API slice this plugin relies on        | `src/sowel-api.ts` (hand-synced with the core's `src/shared/plugin-api.ts`)                                    |
+| Every feature specified here               | [docs/specs-index.md](docs/specs-index.md) — one row per spec, CI-gated                                        |
 | Feature history in this repo               | `specs/NNN-name/{spec,architecture,plan}.md`                                                                   |
 
 The core repo is expected as a sibling directory (`../sowel`) for cross-reference and for the registry bump at release time.
@@ -48,7 +49,7 @@ Local loop against a Sowel instance: build, then install through a personal sour
 - Feature branches for anything non-trivial: `feat/`, `fix/`, `refactor/`, `docs/`. Main is protected (PR required, linear history, CI green).
 - Conventional commits. Scopes: `world`, `occupants`, `environment`, `thermal`, `energy`, `devices`, `orders`, `manifest`, `ci`.
 - **Never merge a PR without explicit user approval** ("oui", "merge", "go").
-- Every new `specs/NNN-name/` folder needs `spec.md`, `architecture.md`, `plan.md` (CI gate).
+- Every new `specs/NNN-name/` folder needs `spec.md`, `architecture.md`, `plan.md` **and a row in `docs/specs-index.md`** (two CI gates). A spec that starts a phase also flips that phase's status in the showroom's project map.
 - A release is a PR (version bump in `package.json` **and** `manifest.json`, changelog entry) then a tag on main, then the **registry hash bump in the core** (spec 089). See the `simulator-release` skill.
 
 ## Skills
