@@ -12,7 +12,19 @@ Sensors also expose **simulation orders** no real device has (`sim.motion`, `sim
 
 ## Status
 
-Not implemented. See the [project map](https://github.com/mchacher/sowel-showroom/blob/main/docs/project-map.md), phase 1.
+Skeleton: the plugin starts, stops and reports its status. The world model is phase 1 of the [project map](https://github.com/mchacher/sowel-showroom/blob/main/docs/project-map.md).
+
+## Development
+
+```bash
+npm install
+npm run validate        # typecheck, lint, format, tests, build — what CI runs
+npm run dev             # tsc --watch
+```
+
+Install on a Sowel instance through a personal source (core spec 136), or copy `manifest.json`, `package.json` and `dist/` into `plugins/simulator/`.
+
+Releases: tag `vX.Y.Z` on main; the workflow publishes `sowel-plugin-simulator-X.Y.Z.tar.gz`. The registry in `mchacher/sowel` must then be bumped with the tarball's SHA256 (spec 089).
 
 ## License
 

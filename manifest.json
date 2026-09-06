@@ -1,0 +1,13 @@
+{
+  "id": "simulator",
+  "type": "integration",
+  "name": "Simulator",
+  "version": "0.1.0",
+  "description": "A simulated home: occupants on an agenda, sun, weather, thermal, PV and loads, published as ordinary devices",
+  "icon": "House",
+  "repo": "mchacher/sowel-plugin-simulator",
+  "author": "mchacher",
+  "sowelVersion": ">=1.68.0",
+  "settings": [],
+  "apiVersion": 2
+}
