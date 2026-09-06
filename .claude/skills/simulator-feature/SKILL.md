@@ -43,9 +43,23 @@ Write three files, in English (CI fails a new spec folder missing one):
 | `architecture.md` | Data, flows, contracts with Sowel's API, file changes                               |
 | `plan.md`         | Implementation steps and the **test plan** (module, scenario, expected)             |
 
+Then two rows, in the same commit as the folder — this is what keeps the
+project findable a year from now, and both are CI-gated or map-gated:
+
+1. **A row in `docs/specs-index.md`** for the new folder. `npm run validate`
+   fails without it.
+2. **The phase status in the showroom's project map**, if this spec starts a
+   phase: flip it to 🚧. The map is the only cross-repository view.
+
+**If the spec contradicts the map's decision table**, do not quietly diverge:
+amend the table in the same pull request (a row changed, with the new reason),
+and say so to the user. A decision that changes silently is a decision that gets
+re-litigated in three months.
+
 Present a summary to the user and ask: "Voulez-vous que j'implémente ?"
 
-> **GATE 2**: three files written, test plan included, user said "oui" / "go".
+> **GATE 2**: three files written, test plan included, index row added, map
+> touched if a phase starts or a decision changes, user said "oui" / "go".
 
 ## Phase 3: Branch & implement
 
@@ -100,3 +114,12 @@ gh pr create --title "feat(scope): ..." --body "Summary / Changes / Test plan"
 ```bash
 gh pr merge <n> --squash --delete-branch && git checkout main && git pull
 ```
+
+Then close the loop on the record, before saying you are done:
+
+- Tick the spec's status to ✅ in `docs/specs-index.md`.
+- Flip the phase status to ✅ in the showroom's project map if this finished a
+  phase, and open the one-line pull request there.
+
+An index that lags is an index nobody trusts; the Sowel core learned that the
+expensive way (42 missing rows, core issue #872).
