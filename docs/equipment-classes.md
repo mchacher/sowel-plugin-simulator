@@ -28,19 +28,47 @@ vendor vocabularies** merged into one type: a Panasonic heat pump contributes
 `pelletSensor`, `sparkPlug`, `ignitionCount`, `stoveState`.
 
 A thermostat is `temperature`, `setpoint`, `power`, `operationMode`. The rest is
-noise from a manufacturer. **The simulator implements the class contract below
+noise from a manufacturer, and it is in there because the binding rule for this
+type is literally "everything the device exposes" — see the note below. **The simulator implements the class contract below
 and nothing else.** That is what makes the work tractable, and it is also the
 honest thing: a simulated Panasonic that does not talk to Panasonic is a lie
 about what is being demonstrated.
 
 > This is a statement about **the simulator**. It is also an observation about
-> the product, recorded here because it was made here: the core defines data
-> _categories_ globally (`setpoint` is a number, `temperature` is a number) but
-> **nothing defines what a Sowel `thermostat` minimally is**. `EquipmentType` is
-> a bare string union, and an equipment ends up carrying whatever the vendor
-> exposed and the user happened to bind. A per-type canonical alias contract
-> would be a product change, argued on its own merits in `mchacher/sowel`, not
-> a thing this plugin decides.
+> the product, recorded here because it was made here — and it is narrower than
+> it first looks.
+>
+> Sowel _does_ define a contract, on three levels. A precise `DataCategory`
+> taxonomy of some forty-five semantic categories (`motion`, `setpoint`,
+> `shutter_position`, `gate_state`…). Per-type compatibility, in
+> `computeBindingCandidates(equipmentType, …)` — a switch on the equipment type
+> deciding which device channels may back it. And reserved aliases for specific
+> roles: `solar` and `solar_state` (spec 152), and the thermostat's `state`
+> (spec 176).
+>
+> The gap is not that nothing is defined. It is that **`thermostat` opts out**:
+>
+> ```ts
+> case "thermostat":
+> case "heater": {
+>   // Single candidate grouping everything (power/setpoint/temperature).
+>   return [{ id: "all", label: "All thermostat data/orders",
+>             dataKeys: deviceData.map((d) => d.key),
+>             orderKeys: deviceOrders.map((o) => o.key) }];
+> }
+> ```
+>
+> Every key the device exposes becomes a binding. That is precisely how `nanoe`,
+> `airSwingLR`, `pelletSensor` and `sparkPlug` became part of a Sowel thermostat,
+> and spec 176 is the bill: on the submetered Panasonic, `power` meant two things
+> at once — the clamp's wattage and the unit's on/off — the alias is unique per
+> equipment, so the boolean had nowhere to live. In production the card showed
+> OFF while the unit ran at 2974 W, and the user sent five ON orders in ninety
+> seconds. Spec 176 says it in one line: _an alias is not a vocabulary_.
+>
+> Closing that per-type vocabulary would be a product change, argued in
+> `mchacher/sowel` on its own merits. This plugin does not decide it; it simply
+> refuses to inherit the consequence.
 
 ## The contract
 
