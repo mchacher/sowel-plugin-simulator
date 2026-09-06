@@ -1,17 +1,17 @@
-# Equipment classes the simulator implements
+# Equipment types the simulator implements
 
 The input to the phase 1 spec: **what** the simulator has to simulate, decided
 before anyone writes a line of it. Derived from the maintainer's real
 installation (74 equipments, 96 devices, 22 zones) through the anonymised
 fixture `docs/fixtures/showroom-fr.zip` in `mchacher/sowel`.
 
-## The rule: simulate the class, not the vendor
+## The rule: simulate the type, not the vendor
 
-The cost of this plugin is **per class, not per instance**. Once a `shutter` is
+The cost of this plugin is **per equipment type, not per instance**. Once a `shutter` is
 simulated, having one or ten costs nothing. Cutting the instance count from 74
-to 38 would have saved almost no work; dropping a class does.
+to 38 would have saved almost no work; dropping a type does.
 
-And most of what looks expensive in a class is not the class at all. Read the
+And most of what looks expensive in a type is not the type at all. Read the
 real contract of `thermostat` in the fixture:
 
 ```
@@ -29,7 +29,7 @@ vendor vocabularies** merged into one type: a Panasonic heat pump contributes
 
 A thermostat is `temperature`, `setpoint`, `power`, `operationMode`. The rest is
 noise from a manufacturer, and it is in there because the binding rule for this
-type is literally "everything the device exposes" — see the note below. **The simulator implements the class contract below
+type is literally "everything the device exposes" — see the note below. **The simulator implements the contract below
 and nothing else.** That is what makes the work tractable, and it is also the
 honest thing: a simulated Panasonic that does not talk to Panasonic is a lie
 about what is being demonstrated.
@@ -72,11 +72,11 @@ about what is being demonstrated.
 
 ## The contract
 
-Every class below is simulated to exactly this list. A reading not listed is not
+Every type below is simulated to exactly this list. A reading not listed is not
 published; an order not listed is accepted, logged at debug, and ignored — never
 an error, per the never-throw rule in `CLAUDE.md`.
 
-| Class                     | Readings                                                  | Orders                               | Where the value comes from                        |
+| Type                      | Readings                                                  | Orders                               | Where the value comes from                        |
 | ------------------------- | --------------------------------------------------------- | ------------------------------------ | ------------------------------------------------- |
 | `light_onoff`             | `state`                                                   | `state`                              | the order itself, plus recipes                    |
 | `light_dimmable`          | `state`, `brightness`                                     | `state`, `brightness`                | the order itself                                  |
@@ -98,7 +98,7 @@ an error, per the never-throw rule in `CLAUDE.md`.
 | `energy_meter`            | `power`, `energy`                                         | —                                    | **the energy model**, per sub-load                |
 
 Three columns of that table are the actual work: presence, thermal, energy. Every
-other class is a façade over one of them, or over the order it just received.
+other type is a façade over one of them, or over the order it just received.
 
 ## Deliberately out of phase 1
 
@@ -117,8 +117,8 @@ which the project map already parks for a later phase.
 ## Instances
 
 The instance list is a **separate, cheaper decision**, made when the demo fixture
-is built: the classes above are what the code must support, and the fixture
+is built: the types above are what the code must support, and the fixture
 chooses how many of each the demo house has. Roughly a dozen zones over two
 levels, one of most things and a few lights and shutters, is enough to make every
-class visible without turning the 3D house into a maze. Nothing in the plugin
+type visible without turning the 3D house into a maze. Nothing in the plugin
 depends on that number.
