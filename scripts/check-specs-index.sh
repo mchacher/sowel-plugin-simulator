@@ -33,17 +33,35 @@ fi
 failed=0
 
 # ── One row per spec folder ───────────────────────────────────────────
+# Pure shell. The core's copy of this script called `basename` and a `grep` per
+# spec folder, which is two processes each and took ~13 s at 175 folders — long
+# enough to blow the timeout of the test that ran it, so `npm run validate` and
+# the pre-push hook were red for a reason unrelated to the change being pushed
+# (mchacher/sowel#917). The work is a set membership test; it does not need a
+# process per element. Fixed here before this repository grows enough specs to
+# feel it.
+# `|| true`: grep exits 1 on an index with no rows at all, and pipefail would
+# then kill the script mid-check without printing anything.
+listed="$( { grep -oE "${ROW}" "${INDEX}" || true; } | tr -d '| ')"
+listed_flat=" $(echo "${listed}" | tr '\n' ' ') "
+
 missing=""
 for dir in specs/*/; do
   [ -d "${dir}" ] || continue
-  slug="$(basename "${dir}")"
+  slug="${dir%/}"
+  slug="${slug##*/}"
   num="${slug%%-*}"
-  # Not a spec folder (no NNN- prefix): nothing to look up, and inviting
-  # someone to paste `| archive | ... |` would be worse than staying quiet.
-  echo "${num}" | grep -qE "^[0-9]{3}[a-z]?$" || continue
-  if ! grep -qE "^\| ${num} \|" "${INDEX}"; then
-    missing="${missing} ${slug}"
-  fi
+  case "${num}" in
+    # 048a / 048b exist in the core, hence the optional letter.
+    [0-9][0-9][0-9] | [0-9][0-9][0-9][a-z]) ;;
+    # Not a spec folder (no NNN- prefix): nothing to look up, and inviting
+    # someone to paste `| archive | ... |` would be worse than staying quiet.
+    *) continue ;;
+  esac
+  case "${listed_flat}" in
+    *" ${num} "*) ;;
+    *) missing="${missing} ${slug}" ;;
+  esac
 done
 
 if [ -n "${missing}" ]; then
@@ -60,7 +78,7 @@ fi
 # French index grew a second copy of eleven specs.
 # `|| true`: grep exits 1 on an index with no rows at all, and pipefail would
 # then kill the script mid-check without printing anything.
-duplicated="$( { grep -oE "${ROW}" "${INDEX}" || true; } | tr -d '| ' | sort | uniq -d | tr '\n' ' ')"
+duplicated="$(echo "${listed}" | sort | uniq -d | tr '\n' ' ')"
 if [ -n "${duplicated}" ]; then
   echo "❌ ${INDEX} lists the same spec more than once: ${duplicated}"
   failed=1
