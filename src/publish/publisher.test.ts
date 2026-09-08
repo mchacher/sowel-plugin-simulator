@@ -136,6 +136,25 @@ describe("what goes on the wire", () => {
     expect(statuses.at(-1)).toEqual({ id: "sim-pv", status: "online" });
   });
 
+  it("says nothing at all for an offline inverter, rather than repeating a zero", () => {
+    const { updates, publisher } = harness();
+    const night = new World(CONFIG, HOUSE);
+    const nightTs = Date.parse("2026-07-15T23:30:00Z");
+    night.warmUp(nightTs);
+
+    // It still opens with a value: an empty card is not "alive at t = 0".
+    publisher.publish(night.advance(nightTs), true);
+    expect(updates.some((u) => u.id === "sim-pv")).toBe(true);
+
+    // But after that it is silent, because `updateDeviceData` marks a device
+    // online again and a heartbeat would resurrect it a minute after sunset.
+    const before = updates.length;
+    for (let minute = 1; minute <= 10; minute++) {
+      publisher.publish(night.advance(nightTs + minute * 60_000));
+    }
+    expect(updates.slice(before).some((u) => u.id === "sim-pv")).toBe(false);
+  });
+
   it("does not repeat a status that has not changed", () => {
     const { statuses, publisher } = harness();
     publisher.publish(world.advance(NOON), true);

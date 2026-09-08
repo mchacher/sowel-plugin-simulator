@@ -15,6 +15,7 @@
 
 import type { House, LoadId } from "../house/types.js";
 import { localParts } from "./clock.js";
+import { smoothNoise } from "./random.js";
 import { clearSkyIrradiance, incidenceFactor, type SunPosition } from "./sun.js";
 
 /** Tilt and orientation of the array. */
@@ -34,11 +35,32 @@ export function pvProductionW(house: House, sun: SunPosition, cloudFactor: numbe
   return Math.max(0, Math.min(house.pv.peakW, raw));
 }
 
-export function baseLoadW(house: House, ts: number, tz: string): number {
+/** A fridge is on for about twenty minutes in every hour, all year round. */
+const FRIDGE_W = 90;
+const FRIDGE_CYCLE_S = 1200;
+
+/**
+ * The household floor.
+ *
+ * It wanders, and that is not decoration. A house whose live power reads exactly
+ * the same watt minute after minute is the single clearest tell that a demo is a
+ * mock — real standby load breathes, because a fridge cycles, a boiler pump
+ * starts, a laptop charges. It also matters downstream: the energy arbiter
+ * smooths the meter over sixty seconds, and a signal with no texture at all is
+ * not what it was tuned against.
+ */
+export function baseLoadW(house: House, ts: number, tz: string, seed: number): number {
   const { hour } = localParts(ts, tz);
-  if (hour < 6 || hour >= 23) return house.baseLoadW.night;
-  if (hour >= 18 && hour < 23) return house.baseLoadW.evening;
-  return house.baseLoadW.day;
+  const floor =
+    hour < 6 || hour >= 23
+      ? house.baseLoadW.night
+      : hour >= 18
+        ? house.baseLoadW.evening
+        : house.baseLoadW.day;
+
+  const wander = 1 + smoothNoise(seed, "base-load", ts / 1000, 420) * 0.12;
+  const fridgeOn = Math.floor(ts / 1000 / FRIDGE_CYCLE_S) % 3 === 0;
+  return floor * wander + (fridgeOn ? FRIDGE_W : 0);
 }
 
 export type LoadPowers = Record<LoadId, number>;

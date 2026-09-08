@@ -70,6 +70,19 @@ describe("the meter", () => {
     expect(counters.importedWh).toBeCloseTo(3600, 5);
   });
 
+  it("breathes rather than reading the same watt for ever", () => {
+    // A perfectly flat live power is the clearest tell that a demo is a mock.
+    const midnight = localMidnight(Date.parse("2026-07-15T12:00:00Z"), PARIS.tz);
+    const samples = Array.from({ length: 40 }, (_, i) =>
+      baseLoadW(HOUSE, midnight + (2 * 3600 + i * 60) * 1000, PARIS.tz, 1789),
+    );
+    expect(new Set(samples).size).toBeGreaterThan(20);
+    for (const watts of samples) {
+      expect(watts).toBeGreaterThan(HOUSE.baseLoadW.night * 0.8);
+      expect(watts).toBeLessThan(HOUSE.baseLoadW.night * 1.2 + 100);
+    }
+  });
+
   it("sags a little under load, like a real clamp", () => {
     expect(gridVoltageV(0)).toBeGreaterThan(gridVoltageV(6000));
     expect(gridVoltageV(6000)).toBeGreaterThan(220);
@@ -77,8 +90,8 @@ describe("the meter", () => {
 
   it("shapes the household floor by the hour", () => {
     const midnight = localMidnight(Date.parse("2026-07-15T12:00:00Z"), PARIS.tz);
-    const night = baseLoadW(HOUSE, midnight + 3 * 3_600_000, PARIS.tz);
-    const evening = baseLoadW(HOUSE, midnight + 20 * 3_600_000, PARIS.tz);
+    const night = baseLoadW(HOUSE, midnight + 3 * 3_600_000, PARIS.tz, 1789);
+    const evening = baseLoadW(HOUSE, midnight + 20 * 3_600_000, PARIS.tz, 1789);
     expect(evening).toBeGreaterThan(night);
   });
 });

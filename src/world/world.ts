@@ -393,7 +393,7 @@ export class World {
 
     const productionW = pvProductionW(this.house, sun, weather.cloudFactor);
     const loadW =
-      baseLoadW(this.house, ts, timezone) +
+      baseLoadW(this.house, ts, timezone, seed) +
       lightingW(this.actuators) +
       electricHeatingW +
       Object.values(loads).reduce((sum, w) => sum + w, 0);
@@ -478,7 +478,7 @@ export class World {
 
     const productionW = pvProductionW(this.house, sun, weather.cloudFactor);
     const loadW =
-      baseLoadW(this.house, now, timezone) +
+      baseLoadW(this.house, now, timezone, seed) +
       lightingW(this.actuators) +
       electricHeatingW +
       Object.values(loads).reduce((sum, w) => sum + w, 0);

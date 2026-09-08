@@ -121,6 +121,13 @@ export class Publisher {
    */
   publish(state: WorldState, force = false): void {
     for (const device of this.house.devices) {
+      // An offline inverter publishes nothing. It has to be silent rather than
+      // repeating a zero, because `updateDeviceData` marks a device online again
+      // — so a heartbeat of `power: 0` would quietly resurrect it a minute after
+      // sunset. The one exception is the forced first publication, so the device
+      // still opens with a value rather than an empty card (FR4).
+      if (device.archetype === "pv" && state.energy.inverterOffline && !force) continue;
+
       const values = this.valuesFor(device, state);
       if (!values) continue;
       const payload = this.gate(device.id, values, state.ts, force);
