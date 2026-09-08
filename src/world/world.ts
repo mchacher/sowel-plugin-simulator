@@ -9,7 +9,7 @@
  */
 
 import { HOUSE } from "../house/house.js";
-import type { House, LoadId, Room } from "../house/types.js";
+import type { DeviceSpec, House, LoadId, Room } from "../house/types.js";
 import {
   initialActuators,
   lightingW,
@@ -129,6 +129,10 @@ export class World {
   private lastOccupiedAt = new Map<string, number>();
   private doorOpenUntil = new Map<string, number>();
   private presence = new Map<string, boolean>();
+  /** Room id → the thermostat or heater in it. Scanned once, not per step. */
+  private readonly heatingDevices = new Map<string, DeviceSpec>();
+  /** The forecast changes once a day; it costs 120 model evaluations to build. */
+  private forecastCache: { day: number; days: ForecastDay[] } | undefined;
 
   constructor(
     private readonly config: WorldConfig,
@@ -137,6 +141,11 @@ export class World {
     this.house = house;
     this.counters = emptyCounters(house);
     this.actuators = initialActuators(house);
+    for (const device of house.devices) {
+      if (device.room && (device.archetype === "thermostat" || device.archetype === "heater")) {
+        this.heatingDevices.set(device.room, device);
+      }
+    }
   }
 
   /** The actuator states, which spec 002 will mutate from orders. */
@@ -173,7 +182,8 @@ export class World {
     this.presence.clear();
 
     for (let ts = midnight; ts < now; ts += WARMUP_STEP_S * 1000) {
-      this.integrate(Math.min(ts + WARMUP_STEP_S * 1000, now), WARMUP_STEP_S);
+      const next = Math.min(ts + WARMUP_STEP_S * 1000, now);
+      this.integrate(next, (next - ts) / 1000);
     }
     this.lastTs = now;
   }
@@ -258,9 +268,7 @@ export class World {
 
   /** Setpoint and enablement a room's heating is running with. */
   private heatingFor(room: Room): { setpointC: number; enabled: boolean } {
-    const device = this.house.devices.find(
-      (d) => d.room === room.id && (d.archetype === "thermostat" || d.archetype === "heater"),
-    );
+    const device = this.heatingDevices.get(room.id);
     if (device?.archetype === "thermostat") {
       const state = this.actuators.thermostats[device.id];
       return { setpointC: state?.setpointC ?? room.setpointC, enabled: state?.power ?? true };
@@ -394,7 +402,7 @@ export class World {
     const productionW = pvProductionW(this.house, sun, weather.cloudFactor);
     const loadW =
       baseLoadW(this.house, ts, timezone, seed) +
-      lightingW(this.actuators) +
+      lightingW(this.house, this.actuators) +
       electricHeatingW +
       Object.values(loads).reduce((sum, w) => sum + w, 0);
     const gridW = loadW - productionW;
@@ -423,6 +431,24 @@ export class World {
     if (someoneInSejour && outdoor.temperatureC > 22) {
       this.doorOpenUntil.set("sim-contact-sejour", ts + 60_000);
     }
+  }
+
+  private forecastFor(now: number): ForecastDay[] {
+    const { timezone, seed, latitude, longitude } = this.config;
+    const day = dayNumber(now, timezone);
+    if (this.forecastCache?.day === day) return this.forecastCache.days;
+    const days = forecast(now, timezone, seed, (dayTs) =>
+      outdoorRangeForDay(
+        dayTs,
+        timezone,
+        latitude,
+        longitude,
+        weatherAt(dayTs, timezone, seed),
+        seed,
+      ),
+    );
+    this.forecastCache = { day, days };
+    return days;
   }
 
   private snapshot(now: number): WorldState {
@@ -479,7 +505,7 @@ export class World {
     const productionW = pvProductionW(this.house, sun, weather.cloudFactor);
     const loadW =
       baseLoadW(this.house, now, timezone, seed) +
-      lightingW(this.actuators) +
+      lightingW(this.house, this.actuators) +
       electricHeatingW +
       Object.values(loads).reduce((sum, w) => sum + w, 0);
     const gridW = loadW - productionW;
@@ -498,16 +524,7 @@ export class World {
       sunset: times.sunset,
       weather,
       outdoor,
-      forecast: forecast(now, timezone, seed, (dayTs) =>
-        outdoorRangeForDay(
-          dayTs,
-          timezone,
-          latitude,
-          longitude,
-          weatherAt(dayTs, timezone, seed),
-          seed,
-        ),
-      ),
+      forecast: this.forecastFor(now),
       rooms,
       pool: {
         waterTemperatureC: this.pool.waterTemperatureC,

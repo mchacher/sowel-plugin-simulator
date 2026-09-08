@@ -102,11 +102,20 @@ export function shutterOpenFraction(state: ActuatorStates, deviceId: string): nu
   return position === undefined ? 1 : position / 100;
 }
 
-/** Watts the lighting is drawing. */
-export function lightingW(state: ActuatorStates): number {
+/**
+ * Watts the lighting is drawing.
+ *
+ * A lighting relay is one with no `load`: the flexible loads name theirs, and
+ * that is the only thing that tells the two apart. Reading the device id would
+ * work today and break the first time a lamp is renamed.
+ */
+export function lightingW(house: House, state: ActuatorStates): number {
   let total = 0;
-  for (const [id, on] of Object.entries(state.relays))
-    if (on && id.startsWith("sim-light-")) total += 9;
+  for (const device of house.devices) {
+    if (device.archetype === "relay" && device.load === undefined && state.relays[device.id]) {
+      total += 9;
+    }
+  }
   for (const channels of Object.values(state.relayChannels)) {
     for (const on of channels) if (on) total += 12;
   }
