@@ -253,8 +253,8 @@ sunrise crossings (FR12).
 constraint, and the UI's label map falls back to the raw string — so the plugin passes
 `"simulator"` and it works today. It is nevertheless a value the core should name.
 
-**A core issue is filed for it and linked from `plan.md`.** It does not block this spec
-and the plugin does not wait for it.
+Filed as [mchacher/sowel#937](https://github.com/mchacher/sowel/issues/937). It does not
+block this spec and the plugin does not wait for it.
 
 ## What the file changes look like
 

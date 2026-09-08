@@ -31,8 +31,9 @@ written before anything touches Sowel, which is the point of the module boundary
 - [ ] **S14 — `manifest.json`**: the seed and fallback-location settings.
 - [ ] **S15 — docs**: `docs/specs-index.md` row (same commit as the spec folder), and
       phase 1 flipped to 🚧 in the showroom project map.
-- [ ] **S16 — core issue**: `"simulator"` missing from `DeviceSource` in
-      `mchacher/sowel`. Filed, linked here, not blocking.
+- [x] **S16 — core issue**: `"simulator"` missing from `DeviceSource` in
+      `mchacher/sowel` — filed as [#937](https://github.com/mchacher/sowel/issues/937).
+      Not blocking; the plugin passes `"simulator"` and does not wait for it.
 
 ## Test plan
 
