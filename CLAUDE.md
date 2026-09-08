@@ -15,7 +15,7 @@ Uses: the public showroom, the docs screenshot pipeline, testing recipes without
 | Why this exists, the decisions, the phases | [sowel-showroom/docs/project-map.md](https://github.com/mchacher/sowel-showroom/blob/main/docs/project-map.md) |
 | How Sowel loads and isolates a plugin      | `mchacher/sowel`: `docs/technical/plugin-development.md`, `src/plugins/scoped-deps.ts` (spec 111)              |
 | The API slice this plugin relies on        | `src/sowel-api.ts` (hand-synced with the core's `src/shared/plugin-api.ts`)                                    |
-| What exactly to simulate, type by type     | [docs/equipment-types.md](docs/equipment-types.md) — the contract, decided before phase 1                      |
+| What exactly to simulate, device by device | [docs/devices.md](docs/devices.md) — the catalogue, decided before phase 1                                     |
 | Every feature specified here               | [docs/specs-index.md](docs/specs-index.md) — one row per spec, CI-gated                                        |
 | Feature history in this repo               | `specs/NNN-name/{spec,architecture,plan}.md`                                                                   |
 
@@ -23,7 +23,8 @@ The core repo is expected as a sibling directory (`../sowel`) for cross-referenc
 
 ## Non-negotiable rules
 
-- **Simulate the type, not the vendor.** The cost here is per equipment type, never per instance. A type is implemented to the contract in [docs/equipment-types.md](docs/equipment-types.md) and to nothing else: a `thermostat` is `temperature`, `setpoint`, `power`, `operationMode`, not the fifteen readings the reference installation carries, which are two vendor vocabularies merged into one type. An order outside the contract is logged at debug and ignored, never an error.
+- **This plugin publishes devices, never equipment types.** The plugin API has no notion of one: a device declares readings and orders, each with a `category`, and **the category is the contract**. Whether a reading ends up on a thermostat or a sensor is decided later, by a person binding an equipment. The catalogue is [docs/devices.md](docs/devices.md).
+- **Simulate the archetype, not the vendor.** The cost here is per archetype, never per instance: one thermostat or ten cost the same. An archetype is implemented to the catalogue and to nothing else — a thermostat is `temperature`, `setpoint`, `power`, `operationMode`, not the fifteen readings the reference installation carries, which are two vendor vocabularies merged into one device. An order outside the catalogue is logged at debug and ignored, never an error.
 - **The plugin simulates the physical world, not the sensors.** Presence, temperature, power are computed from a model and published as readings. It never decides to turn a light on; that is a recipe's job.
 - **Occupants are devices.** Position is a `zone` enum reading. No side channel: a plugin has no other way to publish state, and it is the right way.
 - **Two kinds of presence**: scheduled occupants, and ephemeral presence triggered by `sim.*` orders (a visitor's click). Both from the start.
