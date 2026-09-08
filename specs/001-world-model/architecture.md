@@ -70,7 +70,8 @@ constant, an initial setpoint, and its windows with their orientation.
 | `terrasse`        | Terrasse        | 0     | —            | outdoor, tracks the outdoor model       |
 
 `jardin` is not a room: it is the outdoors, and it is where an occupant is when
-they are neither home nor away.
+they are neither home nor away. **The pool is not a room either** — it is a body of
+water with its own thermal model, described below.
 
 ### Occupants
 
@@ -113,7 +114,8 @@ Around sixty instances, every one of them an archetype from `docs/devices.md`.
 | Pool heat pump                           | the pool                                                                         |
 | Grid clamp                               | the mains                                                                        |
 | PV inverter                              | the roof                                                                         |
-| Sub-load clamp                           | heat pump, water heater, pool pump, kitchen                                      |
+| Relay — flexible load                    | water heater (main), water heater (**solar input**, spec 152), pool pump         |
+| Sub-load clamp                           | heat pump, water heater, pool pump, pool heat pump, kitchen                      |
 | Metered appliance                        | dishwasher, washing machine                                                      |
 | Outdoor module / rain gauge / wind gauge | the weather station                                                              |
 | Forecast                                 | `Weather Forecast`                                                               |
@@ -193,13 +195,69 @@ overshoot of FR6 fall out of the model rather than being faked on top of it.
 
 ```
 production = pvPeak · bell(sunElevation) · cloudFactor
-load       = baseLoad(hour) + Σ appliances + heatPump + flexibleLoads + lighting
+load       = baseLoad(hour) + lighting + Σ appliances + heatPump + Σ flexibleLoads
 grid       = load − production            (signed; negative is export)
 ```
 
 Appliances are agenda-driven intervals with a power profile, publishing `power`,
 `energy` and `appliance_state` — binary, two values, while core issue
 [#936](https://github.com/mchacher/sowel/issues/936) is open.
+
+#### Sizing, so that there is something to arbitrate
+
+These figures are in the house description and they are not decoration: an arbiter with
+no surplus, or with a surplus smaller than its smallest load, demonstrates nothing.
+
+|                              | Nominal                           | Why this value                                                                                                                                                                                    |
+| ---------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PV inverter                  | **6 kWc**                         | A clear midday must export well past the largest single flexible load, with room for two grants at once. 3 kWc would make the whole arbitration surface a flat line.                              |
+| Base load                    | ~300 W floor, ~600 W evening      | A plausible French household floor.                                                                                                                                                               |
+| Water heater                 | **2 400 W**                       | The reference deferrable load of spec 140.                                                                                                                                                        |
+| Pool pump                    | **750 W**                         | The load whose synchronised yo-yo against the water heater is the exact failure spec 140 exists to fix. Two loads at 3 150 W against a 4 kW midday surplus is a real contest, which is the point. |
+| Pool heat pump               | **1 500 W**                       | Comfort-ish, and slow: it is what makes the pool water move.                                                                                                                                      |
+| House heat pump              | 0–2 000 W, from the thermal model | Draw follows the model rather than a schedule.                                                                                                                                                    |
+| Dishwasher / washing machine | ~2 000 W in bursts                | Background load: never arbitrated, only seen through the meter.                                                                                                                                   |
+
+#### Flexible loads, and why each has both a relay and a clamp
+
+Spec 140 reserves a granted load's **measured** draw when a `power` binding exists,
+and falls back to a learned or declared nominal when it does not. The demo should show
+the first path, so every flexible load carries its own sub-load clamp.
+
+And it carries a relay, because a load that cannot be switched is not flexible. The
+first draft of this spec metered the water heater and the pool pump and gave neither a
+way to be turned off, which would have produced a convincing bar chart and an arbiter
+with nothing to arbitrate.
+
+The water heater carries **two** relays. Core spec 152 models the real case — the
+appliance stays on permanent mains and its own programme decides normal heating, while
+a separate dry-contact input forces it to heat on surplus. Those are two distinct
+physical relays, and spec 152 is explicit that nothing at discovery tells them apart,
+so the solar role is assigned by hand. The plugin therefore publishes two ordinary
+relays and declares nothing solar-specific; the fixture binds one as the equipment's
+main on/off and the other to its "Solaire" role.
+
+In this spec the relays exist, are published, and are read by the energy model. They
+are never switched — spec 002 delivers that, and with it the whole arbitration story.
+
+### The pool
+
+The pool is a body of water, not a room, and it integrates like one with a very long
+time constant:
+
+```
+dT/dt = (T_out − T_water) / τ_pool + solarSurface / C_pool + heatPump / C_pool − evaporation / C_pool
+```
+
+`τ_pool` is measured in **days**. That is the property worth showing: an hour of heat
+pump on surplus moves the water by a fraction of a degree, and an afternoon of it is
+visible on the chart. A pool that warmed a degree an hour would be a swimming pool
+nobody has ever owned, and it would quietly teach a visitor the wrong thing about
+what an arbiter does.
+
+Its devices are the pool heat pump (`pool_water_temperature`, outdoor temperature,
+`pool_temperature_setpoint`) and the pool pump, which is a plain relay with a clamp —
+the textbook deferrable load, and the one spec 140 opens on.
 
 ## The publication layer
 

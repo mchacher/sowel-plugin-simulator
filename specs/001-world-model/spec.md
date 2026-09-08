@@ -136,18 +136,80 @@ after a shower. Noise follows occupation. Ranges are in the catalogue.
 
 ### FR9 — Energy
 
+```
+production = pvPeak · bell(sunElevation) · cloudFactor
+load       = baseLoad(hour) + lighting + Σ appliances + heatPump + Σ flexibleLoads
+grid       = load − production            (signed; negative is export)
+```
+
 - **PV**: a bell tied to sun elevation, zero before sunrise and after sunset, clipped
-  at the inverter's nominal peak, multiplied by the weather's cloud factor.
+  at the inverter's nominal peak, multiplied by the weather's cloud factor. The peak
+  is sized so the house **actually exports** on a clear day — see FR9b.
 - **Base load**: a household floor with a plausible daily shape.
 - **Appliances**: driven by the agenda — cooking in the evening, the dishwasher after
   it, laundry on Saturday. Each publishes its own power, its own energy and its
   `appliance_state`.
-- **Flexible loads**: a water heater and a pool pump, which the capacity arbiter
-  (core spec 140) can be given surplus to allocate in a later spec.
-- **Grid**: load minus PV, **signed** — negative means export.
+- **Flexible loads**: a water heater, a pool pump and a pool heat pump, each with its
+  own sub-load clamp. FR9b says why each one is there and what it takes to make it
+  arbitrable.
+- **Grid**: load minus production, **signed** — negative means export.
 - **The `energy` category carries a delta, never a cumulative counter.** Cumulative
   totals go under `energy_forward` and `energy_reverse`, which are monotonic within a
   day because they are integrated from local midnight (FR3).
+
+### FR9b — What the capacity arbiter needs, and which spec provides it
+
+The energy arbiter (core spec 140) is the hardest thing in Sowel to show and the best
+reason for the demo to exist. It is worth naming exactly what it needs from the
+simulated world, because two of the four items were missing from the first draft of
+this spec.
+
+The arbiter is **the only reader of the grid meter**. It smooths the signed power over
+sixty seconds and keeps `availableSurplusW = smoothedExport + Σ granted`, so that the
+collapse in export caused by its own grant does not read as the surplus disappearing.
+Recipes claim watts; the user's priority list orders them; the arbiter grants; the
+**recipes** act — in phase 1 of spec 140 the arbiter issues no orders itself.
+
+| What the arbiter needs                                                                                                                                                                                    | Where it comes from                                                                                                                                             |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A grid clamp publishing **signed** power every second, that reacts within its EMA window when a load switches                                                                                             | **This spec.** The grid is computed from the model each tick, so switching a load moves it immediately.                                                         |
+| A **per-load power clamp** on every flexible load — the arbiter reserves a granted load's _measured_ draw when a `power` binding exists, and falls back to a learned or declared nominal when it does not | **This spec.** One sub-load clamp per flexible load, which is the difference between the arbiter demonstrating reservation accounting and the arbiter guessing. |
+| Loads that are actually **switchable**, and whose draw changes when they are switched                                                                                                                     | **Spec 002.** This spec publishes the relays and the model reads their state; it just never receives an order to change it.                                     |
+| Consumer **recipes** that claim capacity, and a user priority list                                                                                                                                        | **The demo fixture** (spec 003 and phase 2). Open question 1 of the project map.                                                                                |
+
+Two consequences for the device list, both corrections to the first draft:
+
+- **A flexible load needs its relay, not only its clamp.** The first draft metered the
+  water heater and the pool pump and gave neither a way to be switched. Measuring a
+  load nobody can turn off is not a flexible load; it is a bar chart. Each one now has
+  a relay device of its own.
+- **The water heater carries two relays, not one.** Core spec 152 models the real case:
+  the appliance stays on permanent mains and its own programme decides normal heating,
+  while a _separate_ dry-contact input forces it to heat on surplus. Those are two
+  distinct physical relays, and nothing at discovery distinguishes them — the spec is
+  explicit that the solar role is assigned by hand and never guessed. So the plugin
+  publishes two ordinary relays and declares nothing solar-specific; the fixture binds
+  one to the equipment's main on/off and the other to its "Solaire" role. This is the
+  catalogue's own principle holding up under pressure: the category is the contract,
+  and the meaning is the equipment layer's business.
+
+### FR9c — The pool
+
+The pool is in the house because it is the clearest demonstration of a deferrable load
+and because its physics are unusually legible on a chart: tens of cubic metres of water
+have a time constant measured in **days**, not minutes.
+
+- **Pool water temperature** is a state that integrates like any room, with a very long
+  time constant: it loses heat to outdoors and to evaporation, gains it from direct sun
+  on the surface, and gains it from the pool heat pump when that is running.
+- **The pool heat pump** publishes `pool_water_temperature`, its outdoor temperature
+  and its `pool_temperature_setpoint`, per the catalogue.
+- **The pool pump** is a plain relay with its own clamp — the textbook deferrable load
+  of spec 140's own examples, and the one that made the case for the arbiter in the
+  first place.
+
+A visitor watching the pool warm by a fraction of a degree over an afternoon of surplus
+sees, in one number, what an arbiter is for.
 
 ### FR10 — Cadence, taken from the real installation
 
@@ -195,6 +257,13 @@ continues; a tick that overruns is skipped, never queued.
       fraction of it. Both are zero at night.
 - [ ] AC7 — Grid power equals load minus production at every tick, and is negative
       when production exceeds load.
+- [ ] AC7b — Switching a flexible load on moves grid power by that load's draw within
+      one tick, and its own sub-load clamp reports that draw. This is what the
+      arbiter's reservation accounting reads.
+- [ ] AC7c — On a clear day at the nominal peak, export exceeds the largest flexible
+      load's nominal draw for a usable window — otherwise there is nothing to arbitrate.
+- [ ] AC7d — Pool water temperature integrates on a time constant of days: an hour of
+      heat pump moves it by a fraction of a degree, never by a degree.
 - [ ] AC8 — `energy_forward` never decreases within a day, and `energy` is always a
       per-interval delta.
 - [ ] AC9 — The PV inverter's device status is `offline` between sunset and sunrise.
@@ -203,13 +272,15 @@ continues; a tick that overruns is skipped, never queued.
 
 ## Edge cases
 
-| Case                                                     | Expected                                                                                                                                        |
-| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `home.latitude` / `home.longitude` unset                 | Fall back to the documented default location, log once at `warn`, keep running. Spec 111 allows reading them; it does not guarantee they exist. |
-| Plugin restarted at 15:00                                | The house is at 15:00: rooms warm, occupants placed by the agenda, counters integrated from midnight. Not a cold house at 20 °C everywhere.     |
-| Restart crossing local midnight                          | Daily counters reset at local midnight, computed in `home.timezone`.                                                                            |
-| A tick takes longer than its interval                    | Skip, log at `debug`, never queue. A backlog of ticks is a slow-motion house.                                                                   |
-| A day with no sun above the horizon, or a polar latitude | PV stays at zero and the inverter stays offline. No division by zero, no NaN.                                                                   |
-| Two occupants in the same room                           | One PIR, occupancy true. CO₂ climbs faster.                                                                                                     |
-| An order arrives                                         | Logged at `debug`, ignored. Spec 002 gives it meaning.                                                                                          |
-| A device the catalogue does not define                   | Refused at declaration by the catalogue assertion, not published.                                                                               |
+| Case                                                     | Expected                                                                                                                                                                    |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `home.latitude` / `home.longitude` unset                 | Fall back to the documented default location, log once at `warn`, keep running. Spec 111 allows reading them; it does not guarantee they exist.                             |
+| Plugin restarted at 15:00                                | The house is at 15:00: rooms warm, occupants placed by the agenda, counters integrated from midnight. Not a cold house at 20 °C everywhere.                                 |
+| Restart crossing local midnight                          | Daily counters reset at local midnight, computed in `home.timezone`.                                                                                                        |
+| A tick takes longer than its interval                    | Skip, log at `debug`, never queue. A backlog of ticks is a slow-motion house.                                                                                               |
+| A day with no sun above the horizon, or a polar latitude | PV stays at zero and the inverter stays offline. No division by zero, no NaN.                                                                                               |
+| Two occupants in the same room                           | One PIR, occupancy true. CO₂ climbs faster.                                                                                                                                 |
+| An order arrives                                         | Logged at `debug`, ignored. Spec 002 gives it meaning.                                                                                                                      |
+| A device the catalogue does not define                   | Refused at declaration by the catalogue assertion, not published.                                                                                                           |
+| An overcast winter week                                  | Export may never occur. The arbiter correctly grants nothing; the demo is dull but not wrong. The seed and the fallback location are chosen so this is not the common case. |
+| The pool heat pump and the pool pump both drawing        | Both appear on their own clamps and both in the grid. The arbiter's job is exactly to order them; the simulator never arbitrates on its behalf.                             |
