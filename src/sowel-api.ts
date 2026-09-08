@@ -26,15 +26,56 @@ export interface SettingsManager {
   get(key: string): string | undefined;
 }
 
+export type DataType = "number" | "boolean" | "string" | "enum";
+
+export type PowerSource = "battery" | "mains" | "dc" | "unknown";
+
+export interface DiscoveredData {
+  key: string;
+  type: DataType;
+  category: string;
+  unit?: string;
+  enumValues?: string[];
+  /** Wire literals of a boolean reading, when the integration knows them. */
+  valueOn?: string | number | boolean;
+  valueOff?: string | number | boolean;
+}
+
+export interface DiscoveredOrder {
+  key: string;
+  type: DataType;
+  category?: string;
+  min?: number;
+  max?: number;
+  unit?: string;
+  enumValues?: string[];
+  valueOn?: string | number | boolean;
+  valueOff?: string | number | boolean;
+}
+
+/** What `upsertFromDiscovery` takes. Mirrors `DiscoveredDevice` in the core. */
+export interface DiscoveredDevice {
+  friendlyName: string;
+  ieeeAddress?: string;
+  manufacturer?: string;
+  model?: string;
+  powerSource?: PowerSource;
+  data: DiscoveredData[];
+  orders: DiscoveredOrder[];
+  rawExpose?: unknown;
+}
+
+export type DeviceStatus = "online" | "offline" | "unknown";
+
 export interface DeviceManager {
-  upsertFromDiscovery(integrationId: string, source: string, discovered: unknown): void;
+  upsertFromDiscovery(integrationId: string, source: string, discovered: DiscoveredDevice): void;
   updateDeviceData(
     integrationId: string,
     sourceDeviceId: string,
     payload: Record<string, unknown>,
     sourceTimestamp?: number,
   ): void;
-  updateDeviceStatus(integrationId: string, sourceDeviceId: string, status: string): void;
+  updateDeviceStatus(integrationId: string, sourceDeviceId: string, status: DeviceStatus): void;
   removeStaleDevices(integrationId: string, activeIds: Set<string>): void;
   logSummary(): void;
 }

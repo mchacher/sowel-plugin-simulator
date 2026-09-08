@@ -1,0 +1,148 @@
+import { describe, expect, it } from "vitest";
+import { HOUSE } from "../house/house.js";
+import { World, type WorldConfig } from "./world.js";
+
+const CONFIG: WorldConfig = {
+  latitude: 48.8566,
+  longitude: 2.3522,
+  timezone: "Europe/Paris",
+  seed: 1789,
+};
+
+const at = (iso: string) => {
+  const world = new World(CONFIG, HOUSE);
+  return world.advance(Date.parse(iso));
+};
+
+describe("the house reconstructs itself from the clock", () => {
+  it("is warm at three in the afternoon, not cold from a fresh start", () => {
+    const state = at("2026-01-15T14:00:00Z");
+    expect(state.rooms.sejour.temperatureC).toBeGreaterThan(19);
+    expect(state.rooms.sejour.temperatureC).toBeLessThan(23);
+    // And the counters carry the day so far rather than starting at zero.
+    expect(state.energy.counters.importedWh).toBeGreaterThan(0);
+  });
+
+  it("gives the same instant the same house, twice", () => {
+    expect(at("2026-07-15T11:00:00Z")).toEqual(at("2026-07-15T11:00:00Z"));
+  });
+
+  it("bridges a small gap by stepping and a large one by rebuilding", () => {
+    const stepped = new World(CONFIG, HOUSE);
+    const base = Date.parse("2026-07-15T11:00:00Z");
+    stepped.advance(base);
+    for (let i = 1; i <= 60; i++) stepped.advance(base + i * 1000);
+    const rebuilt = at("2026-07-15T11:01:00Z");
+    expect(stepped.advance(base + 60_000).rooms.sejour.temperatureC).toBeCloseTo(
+      rebuilt.rooms.sejour.temperatureC,
+      1,
+    );
+  });
+
+  it("keeps the day's totals monotonic across a restart", () => {
+    const morning = at("2026-07-15T09:00:00Z").energy.counters;
+    const afternoon = at("2026-07-15T15:00:00Z").energy.counters;
+    expect(afternoon.importedWh).toBeGreaterThanOrEqual(morning.importedWh);
+    expect(afternoon.producedWh).toBeGreaterThan(morning.producedWh);
+  });
+
+  it("starts a new local day with fresh counters", () => {
+    const world = new World(CONFIG, HOUSE);
+    const beforeMidnight = Date.parse("2026-07-15T21:50:00Z");
+    const before = world.advance(beforeMidnight).energy.counters.importedWh;
+    const after = world.advance(beforeMidnight + 20 * 60_000).energy.counters.importedWh;
+    expect(before).toBeGreaterThan(0);
+    expect(after).toBeLessThan(before);
+  });
+});
+
+describe("what the house looks like", () => {
+  it("reports motion where the household actually is, and holds it briefly after", () => {
+    const night = at("2026-07-15T01:00:00Z");
+    expect(night.rooms["chambre-parents"].occupants).toBe(2);
+    expect(night.rooms.sejour.occupants).toBe(0);
+    expect(night.rooms.sejour.occupied).toBe(false);
+  });
+
+  it("keeps its doors shut except when someone goes through them", () => {
+    const night = at("2026-07-15T01:00:00Z");
+    for (const closed of Object.values(night.contactsClosed)) expect(closed).toBe(true);
+  });
+
+  it("balances the meter at every tick, and exports at midday in summer", () => {
+    const world = new World(CONFIG, HOUSE);
+    const base = Date.parse("2026-06-21T09:00:00Z");
+    let sawExport = false;
+    for (let minute = 0; minute < 240; minute += 5) {
+      const state = world.advance(base + minute * 60_000);
+      expect(state.energy.gridW).toBeCloseTo(state.energy.loadW - state.energy.productionW, 6);
+      if (state.energy.gridW < 0) sawExport = true;
+    }
+    expect(sawExport).toBe(true);
+  });
+
+  it("produces nothing at night and marks the inverter offline", () => {
+    const night = at("2026-07-15T23:30:00Z");
+    expect(night.energy.productionW).toBe(0);
+    expect(night.energy.inverterOffline).toBe(true);
+    expect(at("2026-07-15T11:00:00Z").energy.inverterOffline).toBe(false);
+  });
+
+  it("leaves the water tank depleted through the sunny part of the day", () => {
+    // This is what gives the energy arbiter something worth granting: with a
+    // daily quota met overnight, a surplus charge would have nothing to do.
+    const midday = at("2026-07-15T11:00:00Z");
+    expect(midday.waterHeater.temperatureC).toBeLessThan(58);
+    expect(midday.energy.loads["water-heater"]).toBe(0);
+  });
+
+  it("draws the water heater on its solar input, and the meter moves with it", () => {
+    const world = new World(CONFIG, HOUSE);
+    const base = Date.parse("2026-06-21T11:00:00Z");
+    const before = world.advance(base);
+    world.actuatorStates.relays["sim-relay-water-heater-solar"] = true;
+    const after = world.advance(base + 60_000);
+
+    expect(after.energy.loads["water-heater"]).toBeGreaterThan(2000);
+    expect(after.energy.gridW - before.energy.gridW).toBeGreaterThan(2000);
+    expect(after.waterHeater.heating).toBe(true);
+  });
+
+  it("meters every flexible load separately, which is what the arbiter reserves", () => {
+    const state = at("2026-06-21T11:00:00Z");
+    for (const load of HOUSE.loads.filter((l) => l.arbiterClass === "deferrable")) {
+      expect(state.energy.loads[load.id]).toBeTypeOf("number");
+      const clamp = HOUSE.devices.find(
+        (d) => d.archetype === "subload_clamp" && d.load === load.id,
+      );
+      expect(clamp, `${load.id} has no clamp`).toBeDefined();
+      const relay = HOUSE.devices.find((d) => d.archetype === "relay" && d.load === load.id);
+      const own = HOUSE.devices.find((d) => d.archetype === "pool_heat_pump" && d.load === load.id);
+      expect(relay ?? own, `${load.id} cannot be switched`).toBeDefined();
+    }
+  });
+
+  it("runs the pool pump on its timer and warms the water while it does", () => {
+    const morning = at("2026-06-21T07:00:00Z");
+    const midday = at("2026-06-21T11:30:00Z");
+    expect(morning.energy.loads["pool-pump"]).toBe(0);
+    expect(midday.energy.loads["pool-pump"]).toBeGreaterThan(0);
+    expect(midday.pool.waterTemperatureC).toBeGreaterThan(15);
+  });
+
+  it("keeps every room habitable all year", () => {
+    for (const iso of ["2026-01-15", "2026-04-15", "2026-07-15", "2026-10-15"]) {
+      const state = at(`${iso}T14:00:00Z`);
+      for (const room of HOUSE.rooms) {
+        if (room.outdoor || room.heating === "none") continue;
+        const temperature = state.rooms[room.id].temperatureC;
+        expect(temperature, `${room.id} on ${iso}`).toBeGreaterThan(16);
+        expect(temperature, `${room.id} on ${iso}`).toBeLessThan(30);
+      }
+    }
+  });
+
+  it("gives the forecast five days starting tomorrow", () => {
+    expect(at("2026-07-15T11:00:00Z").forecast.map((d) => d.index)).toEqual([1, 2, 3, 4, 5]);
+  });
+});

@@ -1,6 +1,6 @@
 # Spec 001 — The house that lives
 
-**Status**: 📝 Draft
+**Status**: ✅ Implemented
 **Phase**: 1 of the [showroom project map](https://github.com/mchacher/sowel-showroom/blob/main/docs/project-map.md) — first of its three specs
 **Depends on**: [`docs/devices.md`](../../docs/devices.md) (the device catalogue, merged in #6)
 
@@ -242,33 +242,33 @@ continues; a tick that overruns is skipped, never queued.
 
 ## Acceptance criteria
 
-- [ ] AC1 — Installed on a stock Sowel instance, the plugin declares its full device
+- [x] AC1 — Installed on a stock Sowel instance, the plugin declares its full device
       list within a second of start, each with a value.
-- [ ] AC2 — Every published key, category, type, unit and bound matches
+- [x] AC2 — Every published key, category, type, unit and bound matches
       `docs/devices.md`. A test asserts the declarations against the catalogue.
-- [ ] AC3 — Starting the plugin twice at the same simulated instant with the same seed
+- [x] AC3 — Starting the plugin twice at the same simulated instant with the same seed
       produces identical readings.
-- [ ] AC4 — Room temperatures integrate: a step change in outdoor temperature moves
+- [x] AC4 — Room temperatures integrate: a step change in outdoor temperature moves
       them gradually, with a time constant per room, not instantly.
-- [ ] AC5 — Occupancy in a room is true while the agenda puts an occupant there and
+- [x] AC5 — Occupancy in a room is true while the agenda puts an occupant there and
       clears after the hold time once it does not.
-- [ ] AC6 — Over a simulated clear summer day, PV energy is within a plausible band of
+- [x] AC6 — Over a simulated clear summer day, PV energy is within a plausible band of
       the inverter's nominal peak; over a simulated overcast winter day it is a small
       fraction of it. Both are zero at night.
-- [ ] AC7 — Grid power equals load minus production at every tick, and is negative
+- [x] AC7 — Grid power equals load minus production at every tick, and is negative
       when production exceeds load.
-- [ ] AC7b — Switching a flexible load on moves grid power by that load's draw within
+- [x] AC7b — Switching a flexible load on moves grid power by that load's draw within
       one tick, and its own sub-load clamp reports that draw. This is what the
       arbiter's reservation accounting reads.
-- [ ] AC7c — On a clear day at the nominal peak, export exceeds the largest flexible
+- [x] AC7c — On a clear day at the nominal peak, export exceeds the largest flexible
       load's nominal draw for a usable window — otherwise there is nothing to arbitrate.
-- [ ] AC7d — Pool water temperature integrates on a time constant of days: an hour of
+- [x] AC7d — Pool water temperature integrates on a time constant of days: an hour of
       heat pump moves it by a fraction of a degree, never by a degree.
-- [ ] AC8 — `energy_forward` never decreases within a day, and `energy` is always a
+- [x] AC8 — `energy_forward` never decreases within a day, and `energy` is always a
       per-interval delta.
-- [ ] AC9 — The PV inverter's device status is `offline` between sunset and sunrise.
-- [ ] AC10 — No published key appears in the catalogue's prohibition list.
-- [ ] AC11 — `npm run validate` is green; the world model's tests need no Sowel.
+- [x] AC9 — The PV inverter's device status is `offline` between sunset and sunrise.
+- [x] AC10 — No published key appears in the catalogue's prohibition list.
+- [x] AC11 — `npm run validate` is green; the world model's tests need no Sowel.
 
 ## Edge cases
 

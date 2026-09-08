@@ -8,31 +8,31 @@ written before anything touches Sowel, which is the point of the module boundary
 
 ## Steps
 
-- [ ] **S1 — `house/`**: the types and the house description. No behaviour, just the
+- [x] **S1 — `house/`**: the types and the house description. No behaviour, just the
       data of `architecture.md`. Rooms, windows, occupants, device instances.
-- [ ] **S2 — `world/random.ts` + `world/clock.ts`**: seeded PRNG with per-subject
+- [x] **S2 — `world/random.ts` + `world/clock.ts`**: seeded PRNG with per-subject
       derivation; local midnight and timezone helpers; the tick scheduler with its
       overrun-skip rule.
-- [ ] **S3 — `world/sun.ts`**: solar elevation, azimuth, sunrise, sunset.
-- [ ] **S4 — `world/weather.ts` + `world/outdoor.ts`**: daily condition, cloud factor,
+- [x] **S3 — `world/sun.ts`**: solar elevation, azimuth, sunrise, sunset.
+- [x] **S4 — `world/weather.ts` + `world/outdoor.ts`**: daily condition, cloud factor,
       rain, wind, five-day forecast; outdoor temperature and humidity.
-- [ ] **S5 — `world/occupants.ts`**: agendas to positions, entrance transitions.
-- [ ] **S6 — `world/thermal.ts`**: the per-room integration and the midnight warm-up.
-- [ ] **S7 — `world/air.ts`**: CO₂, indoor humidity, noise.
-- [ ] **S8 — `world/energy.ts`**: PV, base load, appliances, flexible loads with
+- [x] **S5 — `world/occupants.ts`**: agendas to positions, entrance transitions.
+- [x] **S6 — `world/thermal.ts`**: the per-room integration and the midnight warm-up.
+- [x] **S7 — `world/air.ts`**: CO₂, indoor humidity, noise.
+- [x] **S8 — `world/energy.ts`**: PV, base load, appliances, flexible loads with
       their relays and their clamps, grid, counters integrated from midnight. Sizing
       from `architecture.md` — the arbiter needs a surplus larger than its loads.
-- [ ] **S8b — `world/pool.ts`**: the pool's water temperature, integrating on a time
+- [x] **S8b — `world/pool.ts`**: the pool's water temperature, integrating on a time
       constant of days from sun, outdoor, evaporation and the pool heat pump.
-- [ ] **S9 — `world/world.ts`**: compose into `WorldState`.
-- [ ] **S10 — `publish/catalogue.ts`**: the archetype declarations, with the two audit
+- [x] **S9 — `world/world.ts`**: compose into `WorldState`.
+- [x] **S10 — `publish/catalogue.ts`**: the archetype declarations, with the two audit
       constraints commented against their issues.
-- [ ] **S11 — `publish/instances.ts`**: house description to the concrete instance list.
-- [ ] **S12 — `publish/publisher.ts`**: discovery at start, first values, then the
+- [x] **S11 — `publish/instances.ts`**: house description to the concrete instance list.
+- [x] **S12 — `publish/publisher.ts`**: discovery at start, first values, then the
       cadence- and change-gated updates; PV inverter status at the two crossings.
-- [ ] **S13 — `src/index.ts`**: wiring and the tick. `executeOrder` stays a `debug` log.
-- [ ] **S14 — `manifest.json`**: the seed and fallback-location settings.
-- [ ] **S15 — docs**: `docs/specs-index.md` row (same commit as the spec folder), and
+- [x] **S13 — `src/index.ts`**: wiring and the tick. `executeOrder` stays a `debug` log.
+- [x] **S14 — `manifest.json`**: the seed and fallback-location settings.
+- [x] **S15 — docs**: `docs/specs-index.md` row (same commit as the spec folder), and
       phase 1 flipped to 🚧 in the showroom project map.
 - [x] **S16 — core issue**: `"simulator"` missing from `DeviceSource` in
       `mchacher/sowel` — filed as [#937](https://github.com/mchacher/sowel/issues/937).

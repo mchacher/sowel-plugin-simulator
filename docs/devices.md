@@ -60,15 +60,18 @@ are `single`, `double`, `hold`.
 | Archetype           | Readings                                                                  | Orders                                                                                                        |
 | ------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | Relay / light       | `state` → `light_state`, boolean                                          | `state` → `light_toggle`, boolean                                                                             |
-| Multi-channel relay | `power1`…`power4` → `light_state`, enum `["ON","OFF"]`                    | same keys → `light_toggle`                                                                                    |
+| Multi-channel relay | `power1` … `power4` → `light_state`, boolean                              | same keys → `light_toggle`                                                                                    |
 | Dimmable light      | `state` → `light_state`; `brightness` → `light_brightness`, number, 0–254 | `state` → `light_toggle`; `brightness` → `set_brightness`, min 0, max 254                                     |
 | Shutter             | `position` → `shutter_position`, number, `%`, 0–100                       | `position` → `set_shutter_position`, min 0, max 100; `state` → `shutter_move`, enum `["OPEN","CLOSE","STOP"]` |
 | Gate                | `R1` → `gate_state`, boolean                                              | `R1` → `gate_trigger`                                                                                         |
 | Water valve         | `state` → `light_state`, boolean                                          | `state` → `light_toggle`                                                                                      |
 
-**On/off has no single shape.** A Zigbee relay is a boolean carrying its own wire
-values `ON` / `OFF`; a Tasmota relay is an enum of exactly those two strings. Pick one
-per archetype and stay with it.
+**On/off is a boolean everywhere.** In the field it has no single shape: a Zigbee relay
+is a boolean carrying its own wire values `ON` / `OFF`, a Tasmota relay is an enum of
+exactly those two strings, and [core issue #930](https://github.com/mchacher/sowel/issues/930)
+is about eighteen modules downstream defending against both. A greenfield plugin has no
+reason to reproduce that. Every on/off here is `type: "boolean"`, on every archetype,
+with no wire literals at all — the simulator has no wire.
 
 **Brightness travels on the Zigbee 0 to 254 scale**, not a percentage. A device's
 declared `min` / `max` are ignored downstream and that range is hard-coded in the
@@ -80,14 +83,24 @@ and 100 is open, and the value must travel over a few seconds rather than jump.
 
 ### Climate
 
-| Archetype              | Readings                                                                                                                                      | Orders                                                                                                        |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Heat pump / thermostat | `temperature` → `temperature`, `°C`; `setpoint` → `setpoint`, `°C`; `power` → `power`, boolean; `operationMode` → `operation_mode`, enum      | `power` → `toggle_power`; `setpoint` → `set_setpoint`, min 16, max 30; `operationMode` → `set_operation_mode` |
-| Pool heat pump         | `water_temperature` → `pool_water_temperature`, `°C`; `outdoor_temperature` → `temperature_outdoor`; `setpoint` → `pool_temperature_setpoint` | `setpoint` → `set_pool_temperature_setpoint`, min 10, max 30                                                  |
-| Electric heater        | `state` → `light_state`, boolean                                                                                                              | `state` → `light_toggle`                                                                                      |
+| Archetype              | Readings                                                                                                                                                                                           | Orders                                                                                                        |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Heat pump / thermostat | `temperature` → `temperature`, `°C`; `setpoint` → `setpoint`, `°C`; `state` → `light_state`, boolean; `operationMode` → `operation_mode`, enum; `outsideTemperature` → `temperature_outdoor`, `°C` | `power` → `toggle_power`; `setpoint` → `set_setpoint`, min 16, max 30; `operationMode` → `set_operation_mode` |
+| Pool heat pump         | `water_temperature` → `pool_water_temperature`, `°C`; `outdoor_temperature` → `temperature_outdoor`; `setpoint` → `pool_temperature_setpoint`                                                      | `setpoint` → `set_pool_temperature_setpoint`, min 10, max 30                                                  |
+| Electric heater        | `state` → `light_state`, boolean                                                                                                                                                                   | `state` → `light_toggle`                                                                                      |
+
+**The run state does not go under `power`.** Core spec 176 binds a thermostat's boolean
+run state to the same `state` alias every relay-style equipment uses, because on a
+submetered unit the `power` alias is the wattage read from a clamp — and
+`UNIQUE(equipment_id, alias)` means whichever binds first evicts the other, which is
+how a real heat pump lost its on/off ([core issue #901](https://github.com/mchacher/sowel/issues/901)).
+Declaring the boolean under category `power` does work, but only because the core
+rescues that case for the plugin that got there first. `light_state` maps to the
+`state` alias directly, and a greenfield plugin has no reason to need rescuing.
 
 `operationMode` takes the core's closed vocabulary: `auto`, `heat`, `cool`, `dry`,
-`fan`, `off`.
+`fan`, `off` — and declares only the modes the simulated unit actually has. A mode a
+device cannot honour is vendor noise like any other.
 
 **Worth knowing: no plugin publishes the `operation_mode` / `set_operation_mode`
 categories today.** The contract declares them, the real integrations have not adopted
@@ -147,6 +160,18 @@ the series starts at tomorrow.
 
 `condition` values: `sunny`, `partly_cloudy`, `cloudy`, `foggy`, `rainy`, `snowy`,
 `stormy`. They must agree with `rain_prob`: sunny near 0, rainy 60 to 95.
+
+### Occupants
+
+| Archetype | Readings                                                                         | Orders |
+| --------- | -------------------------------------------------------------------------------- | ------ |
+| Occupant  | `zone` → `generic`, enum of room ids plus `away`; `present` → `generic`, boolean | —      |
+
+**These are not how presence reaches Sowel.** An occupant is not in a zone — it moves
+between them — so it is not something a person binds to an equipment. What a person
+binds is a motion sensor in a room, and that sensor fires because an occupant is in it.
+The occupant devices exist for the 3D application and for debugging, which is why they
+sit under `generic` and expose no orders.
 
 ## Conventions the simulator must honour
 
