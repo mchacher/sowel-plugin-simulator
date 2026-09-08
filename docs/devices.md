@@ -119,6 +119,20 @@ On a grid clamp, `power` is signed: negative means export.
 clips the rest (core issue #936). The simulator declares `["on","off"]` — the richer
 vocabulary is worth having only once the chart supports it.
 
+**A flexible load is a relay _and_ a clamp.** The energy arbiter (core spec 140)
+reserves a granted load's measured draw when a `power` binding exists, and falls back to
+a nominal when it does not. So every arbitrable load in the demo — water heater, pool
+pump — gets both a relay archetype and a sub-load clamp. A metered load nobody can
+switch is a bar chart, not a flexible load.
+
+**A water heater carries two relays.** Core spec 152 models the real case: the appliance
+stays on permanent mains and its own programme decides normal heating, while a separate
+dry-contact input forces it to heat on surplus. Two distinct physical relays, and
+nothing at discovery tells them apart — spec 152 is explicit that the solar role is
+assigned by hand, never guessed. So this plugin declares two ordinary relays and nothing
+solar-specific; whoever binds them assigns one to the main on/off and the other to the
+"Solaire" role. The category is the contract; the meaning is the equipment layer's.
+
 ### Weather
 
 | Archetype      | Readings                                                                                                                                                                                        |
@@ -190,7 +204,8 @@ implements.
 Motion lighting needs sensors and relays. Shutters at dusk need shutters. Presence
 heating needs a thermostat, a heater and a temperature probe. The energy story needs a
 grid clamp, a PV inverter and two or three sub-load clamps. The capacity arbiter needs
-a flexible load, a pool pump or a water heater. Add a gate for the timed action, a
+at least two flexible loads that can contend — a pool pump and a water heater, each
+with its relay and its clamp — and a PV peak large enough that the surplus exceeds them. Add a gate for the timed action, a
 water valve for irrigation, a weather station and a forecast, and a button bound to a
 mode.
 
