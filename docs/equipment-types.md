@@ -28,47 +28,44 @@ vendor vocabularies** merged into one type: a Panasonic heat pump contributes
 `pelletSensor`, `sparkPlug`, `ignitionCount`, `stoveState`.
 
 A thermostat is `temperature`, `setpoint`, `power`, `operationMode`. The rest is
-noise from a manufacturer, and it is in there because the binding rule for this
-type is literally "everything the device exposes" — see the note below. **The simulator implements the contract below
+noise from a manufacturer.
+
+**Since 2026-09-07 the product says so itself**, in
+`src/shared/thermostat-contract.ts` (spec 177, core issue #921). That file is
+the source of truth for this type — not the table below, which cites it. When
+the two disagree, the product wins and this document is wrong. **The simulator implements the contract below
 and nothing else.** That is what makes the work tractable, and it is also the
 honest thing: a simulated Panasonic that does not talk to Panasonic is a lie
 about what is being demonstrated.
 
-> This is a statement about **the simulator**. It is also an observation about
-> the product, recorded here because it was made here — and it is narrower than
-> it first looks.
+> This is a statement about **the simulator**, and half of it is now also true
+> of the product.
 >
-> Sowel _does_ define a contract, on three levels. A precise `DataCategory`
-> taxonomy of some forty-five semantic categories (`motion`, `setpoint`,
-> `shutter_position`, `gate_state`…). Per-type compatibility, in
-> `computeBindingCandidates(equipmentType, …)` — a switch on the equipment type
-> deciding which device channels may back it. And reserved aliases for specific
-> roles: `solar` and `solar_state` (spec 152), and the thermostat's `state`
-> (spec 176).
+> Sowel always defined a contract on three levels: a `DataCategory` taxonomy of
+> some forty-five semantic categories, per-type compatibility in
+> `computeBindingCandidates`, and reserved aliases per role. What it did not
+> define was what a `thermostat` **is** — that branch returned a single
+> candidate holding every key the device exposed, labelled "All thermostat
+> data/orders". That is how `nanoe`, `airSwingUD`, `pelletSensor` and
+> `resetAlarm` became part of a Sowel thermostat, and spec 176 was the bill:
+> on the submetered Panasonic, `power` meant the clamp's wattage and the unit's
+> on/off at once, the card read OFF while it ran at 2974 W, and the user sent
+> five ON orders in ninety seconds. _An alias is not a vocabulary._
 >
-> The gap is not that nothing is defined. It is that **`thermostat` opts out**:
+> **Core issue #921 closed that**, in `src/shared/thermostat-contract.ts`: the
+> core aliases, the identity by `setpoint` / `set_setpoint` category rather than
+> by a raw vendor key, the closed `operationMode` vocabulary, and a
+> `splitThermostatExtras` helper. Extras stay bound and usable; they define
+> nothing.
 >
-> ```ts
-> case "thermostat":
-> case "heater": {
->   // Single candidate grouping everything (power/setpoint/temperature).
->   return [{ id: "all", label: "All thermostat data/orders",
->             dataKeys: deviceData.map((d) => d.key),
->             orderKeys: deviceOrders.map((o) => o.key) }];
-> }
-> ```
+> **What is still open is core issue #922**: the Panasonic and MCZ plugins keep
+> publishing their own keys, the core still renames two of them, and existing
+> bindings still point at the old names. That half carries a migration on
+> running heating hardware and is deliberately parked.
 >
-> Every key the device exposes becomes a binding. That is precisely how `nanoe`,
-> `airSwingLR`, `pelletSensor` and `sparkPlug` became part of a Sowel thermostat,
-> and spec 176 is the bill: on the submetered Panasonic, `power` meant two things
-> at once — the clamp's wattage and the unit's on/off — the alias is unique per
-> equipment, so the boolean had nowhere to live. In production the card showed
-> OFF while the unit ran at 2974 W, and the user sent five ON orders in ninety
-> seconds. Spec 176 says it in one line: _an alias is not a vocabulary_.
->
-> Closing that per-type vocabulary would be a product change, argued in
-> `mchacher/sowel` on its own merits. This plugin does not decide it; it simply
-> refuses to inherit the consequence.
+> **This plugin is on the near side of that gap.** It has no legacy to migrate,
+> so it publishes the declared contract from birth — which makes it the first
+> integration to speak it properly, before the real plugins do.
 
 ## The contract
 
@@ -76,29 +73,43 @@ Every type below is simulated to exactly this list. A reading not listed is not
 published; an order not listed is accepted, logged at debug, and ignored — never
 an error, per the never-throw rule in `CLAUDE.md`.
 
-| Type                      | Readings                                                  | Orders                               | Where the value comes from                        |
-| ------------------------- | --------------------------------------------------------- | ------------------------------------ | ------------------------------------------------- |
-| `light_onoff`             | `state`                                                   | `state`                              | the order itself, plus recipes                    |
-| `light_dimmable`          | `state`, `brightness`                                     | `state`, `brightness`                | the order itself                                  |
-| `switch`                  | `state`                                                   | `state`                              | the order itself                                  |
-| `heater`                  | `state`                                                   | `state`                              | the order itself; feeds the thermal model         |
-| `pool_pump`               | `state`                                                   | `state`                              | the order itself; a flexible load for the arbiter |
-| `shutter`                 | `position`                                                | `position`, `state`                  | the order, with a travel time; gates solar gain   |
-| `pool_cover`              | `position`                                                | `position`                           | same, slower                                      |
-| `button`                  | `action`                                                  | —                                    | an occupant, or a `sim.*` order                   |
-| `gate`                    | `state`                                                   | `command`                            | a sequential impulse, so spec 174 has its demo    |
-| `sensor`                  | `occupancy`, `temperature`, `humidity`, `illuminance`     | —                                    | **the presence and thermal models**               |
-| `thermostat`              | `temperature`, `setpoint`, `power`, `operationMode`       | `setpoint`, `power`, `operationMode` | **the thermal model**                             |
-| `pool_heat_pump`          | `temperature`, `setpoint`, `state`                        | `setpoint`, `state`                  | a slow pool thermal model                         |
-| `water_valve`             | `state`, `flow`                                           | `state`                              | the order itself                                  |
-| `weather`                 | `temperature`, `humidity`, `pressure`, `rain`             | —                                    | **the environment model**                         |
-| `weather_forecast`        | 5 days x `temp_min`, `temp_max`, `condition`, `rain_prob` | —                                    | the environment model, projected                  |
-| `main_energy_meter`       | `power`, `energy`, `energy_forward`, `energy_reverse`     | —                                    | **the energy model**, signed grid                 |
-| `energy_production_meter` | `power`, `energy`                                         | —                                    | **the energy model**, PV                          |
-| `energy_meter`            | `power`, `energy`                                         | —                                    | **the energy model**, per sub-load                |
+| Type                      | Readings                                                                           | Orders                               | Where the value comes from                        |
+| ------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------- |
+| `light_onoff`             | `state`                                                                            | `state`                              | the order itself, plus recipes                    |
+| `light_dimmable`          | `state`, `brightness`                                                              | `state`, `brightness`                | the order itself                                  |
+| `switch`                  | `state`                                                                            | `state`                              | the order itself                                  |
+| `heater`                  | `state`                                                                            | `state`                              | the order itself; feeds the thermal model         |
+| `pool_pump`               | `state`                                                                            | `state`                              | the order itself; a flexible load for the arbiter |
+| `shutter`                 | `position`                                                                         | `position`, `state`                  | the order, with a travel time; gates solar gain   |
+| `pool_cover`              | `position`                                                                         | `position`                           | same, slower                                      |
+| `button`                  | `action`                                                                           | —                                    | an occupant, or a `sim.*` order                   |
+| `gate`                    | `state`                                                                            | `command`                            | a sequential impulse, so spec 174 has its demo    |
+| `sensor`                  | `occupancy`, `temperature`, `humidity`, `illuminance`                              | —                                    | **the presence and thermal models**               |
+| `thermostat`              | `temperature`, `setpoint`, `state`, `power`, `operationMode`, `outsideTemperature` | `setpoint`, `power`, `operationMode` | **the thermal model**                             |
+| `pool_heat_pump`          | `temperature`, `setpoint`, `state`                                                 | `setpoint`, `state`                  | a slow pool thermal model                         |
+| `water_valve`             | `state`, `flow`                                                                    | `state`                              | the order itself                                  |
+| `weather`                 | `temperature`, `humidity`, `pressure`, `rain`                                      | —                                    | **the environment model**                         |
+| `weather_forecast`        | 5 days x `temp_min`, `temp_max`, `condition`, `rain_prob`                          | —                                    | the environment model, projected                  |
+| `main_energy_meter`       | `power`, `energy`, `energy_forward`, `energy_reverse`                              | —                                    | **the energy model**, signed grid                 |
+| `energy_production_meter` | `power`, `energy`                                                                  | —                                    | **the energy model**, PV                          |
+| `energy_meter`            | `power`, `energy`                                                                  | —                                    | **the energy model**, per sub-load                |
 
 Three columns of that table are the actual work: presence, thermal, energy. Every
 other type is a façade over one of them, or over the order it just received.
+
+## Where a type is declared by the product, import it
+
+A plugin cannot import from the core's source tree, so the contract is
+**restated in this repository and kept honest by a test**, not copied by hand
+and left to drift. For `thermostat` that means a fixture in this repo mirrors
+`THERMOSTAT_CORE` and `OPERATION_MODE_VALUES`, and the phase 1 spec decides how
+it is checked against the published core — the cheapest option being a test that
+reads the version pinned in `manifest.json`'s `sowelVersion` and fails when the
+two lists diverge.
+
+The rule: when the product declares a type's contract, this plugin follows it. It
+never invents a second one, and it never publishes an alias the product would
+call an extra.
 
 ## Deliberately out of phase 1
 
@@ -113,6 +124,29 @@ other type is a façade over one of them, or over the order it just received.
 the UI, and a house where nothing ever has a low battery is slightly too clean.
 They are out of phase 1 because they belong with simulated hardware faults,
 which the project map already parks for a later phase.
+
+## The fixture is remapped, not just re-badged
+
+The demo house is built from the core's anonymised showroom fixture, so the zones,
+equipments, recipes and modes are the shape of a real home. The first plan was to
+rewrite each device's `integration_id` to `simulator` and stop there. **That is not
+enough**, and doing only that would contradict the rule above.
+
+The fixture's bindings name the keys the original integrations published, and for
+most types those already coincide with the canonical alias — `state`, `position`,
+`temperature`, `occupancy`, `power`. For the thermostat they do not: the binding is
+literally `nanoe`, `airSwingLR`, `ignitionCount`. Reuse those bindings unchanged and
+the simulator is forced to publish Panasonic and MCZ vocabulary to make them
+resolve.
+
+So the fixture build **also rewrites the keys to the contract above and re-points
+the bindings**, and drops the bindings with no counterpart. It is a few more lines
+in a script that already anonymises names, and it is the difference between a demo
+that shows a clean thermostat and one that shows a Panasonic with the badge filed
+off.
+
+Pleasant side effect: the demo becomes a working illustration of what core issue
+#922 asks the real plugins to do.
 
 ## Instances
 
