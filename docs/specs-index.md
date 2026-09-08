@@ -14,6 +14,7 @@ Status: 📝 Draft · 🚧 In progress · ✅ Shipped
 | #   | Title                | Status | Summary                                                                                                                                                       |
 | --- | -------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 001 | The house that lives | ✅     | Phase 1, first of three. The deterministic world model — sun, weather, thermal, occupants, energy — published as the devices of `docs/devices.md`. Read-only. |
+| 002 | The house that obeys | 📝     | Phase 1, second of three. Order execution with echo, the `sim.*` simulation orders, ghosts, and the per-target debounce.                                      |
 
 ## How to use this index after context loss
 
