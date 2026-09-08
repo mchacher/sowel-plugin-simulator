@@ -51,7 +51,14 @@ describe("the catalogue matches docs/devices.md", () => {
         }
       }
       for (const order of declaration.orders) {
-        expect(order.category, `${device.id}.${order.key}`).toBeTruthy();
+        // Simulation orders carry no category, deliberately: a category is what
+        // every core consumer keys off, and giving one to `sim.motion` would
+        // make a motion sensor look like an actuator in the binding dialog.
+        if (order.key.startsWith("sim.")) {
+          expect(order.category, `${device.id}.${order.key}`).toBeUndefined();
+        } else {
+          expect(order.category, `${device.id}.${order.key}`).toBeTruthy();
+        }
         if (order.type === "enum") {
           expect(order.enumValues?.length, `${device.id}.${order.key}`).toBeGreaterThan(0);
         }
@@ -152,7 +159,12 @@ describe("the categories the core actually keys off", () => {
     // An occupant is not in a zone — it moves between them — so it is not
     // something a person binds to an equipment.
     for (const entry of declarationOf("occupant").data) expect(entry.category).toBe("generic");
-    expect(declarationOf("occupant").orders).toEqual([]);
+    // Its only orders are simulation ones, and they carry no category, so an
+    // occupant offers a binding dialog nothing it would recognise.
+    for (const order of declarationOf("occupant").orders) {
+      expect(order.key.startsWith("sim.")).toBe(true);
+      expect(order.category).toBeUndefined();
+    }
   });
 
   it("inverts the door contact the way Zigbee does", () => {

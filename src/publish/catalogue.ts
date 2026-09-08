@@ -82,6 +82,16 @@ export const BRIGHTNESS_MAX = 254;
 
 const battery = { key: "battery", type: "number", category: "battery", unit: "%" } as const;
 
+/**
+ * Simulation orders (spec 002, FR3) carry **no category**.
+ *
+ * A category is what every core consumer keys off, and these are none of the
+ * categories the core knows. Giving them one would make a motion sensor look
+ * like an actuator in the binding dialog. Uncategorised they are extras: bound
+ * by hand when someone wants them, invisible otherwise.
+ */
+const SIM_TRIGGER = { type: "boolean" } as const;
+
 type Declaration = Omit<DiscoveredDevice, "friendlyName">;
 
 function declarationFor(archetype: Archetype, device: DeviceSpec, house: House): Declaration {
@@ -89,7 +99,7 @@ function declarationFor(archetype: Archetype, device: DeviceSpec, house: House):
     case "motion":
       return {
         data: [{ key: "occupancy", type: "boolean", category: "motion" }, battery],
-        orders: [],
+        orders: [{ key: "sim.motion", ...SIM_TRIGGER }],
         powerSource: "battery",
       };
     case "motion_lux":
@@ -99,7 +109,7 @@ function declarationFor(archetype: Archetype, device: DeviceSpec, house: House):
           { key: "illuminance", type: "number", category: "luminosity", unit: "lx" },
           battery,
         ],
-        orders: [],
+        orders: [{ key: "sim.motion", ...SIM_TRIGGER }],
         powerSource: "battery",
       };
     case "contact":
@@ -107,7 +117,10 @@ function declarationFor(archetype: Archetype, device: DeviceSpec, house: House):
         // Zigbee declares `contact` true-means-CLOSED. A door that reads true
         // when open is a door every recipe gets backwards.
         data: [{ key: "contact", type: "boolean", category: "contact_door" }, battery],
-        orders: [],
+        orders: [
+          { key: "sim.open", ...SIM_TRIGGER },
+          { key: "sim.close", ...SIM_TRIGGER },
+        ],
         powerSource: "battery",
       };
     case "th_probe":
@@ -117,7 +130,7 @@ function declarationFor(archetype: Archetype, device: DeviceSpec, house: House):
           { key: "humidity", type: "number", category: "humidity", unit: "%" },
           battery,
         ],
-        orders: [],
+        orders: [{ key: "sim.temperature", type: "number", min: -10, max: 40, unit: "°C" }],
         powerSource: "battery",
       };
     case "air_quality":
@@ -262,6 +275,7 @@ function declarationFor(archetype: Archetype, device: DeviceSpec, house: House):
             category: "set_operation_mode",
             enumValues: SIMULATED_OPERATION_MODES,
           },
+          { key: "sim.temperature", type: "number", min: -10, max: 40, unit: "°C" },
         ],
         powerSource: "mains",
       };
@@ -347,7 +361,7 @@ function declarationFor(archetype: Archetype, device: DeviceSpec, house: House):
           { key: "humidity", type: "number", category: "humidity_outdoor", unit: "%" },
           battery,
         ],
-        orders: [],
+        orders: [{ key: "sim.weather", type: "enum", enumValues: WEATHER_CONDITIONS }],
         powerSource: "battery",
       };
     case "rain_gauge":
@@ -413,7 +427,19 @@ function declarationFor(archetype: Archetype, device: DeviceSpec, house: House):
           },
           { key: "present", type: "boolean", category: "generic" },
         ],
-        orders: [],
+        orders: [
+          { key: "sim.enter", ...SIM_TRIGGER },
+          { key: "sim.leave", ...SIM_TRIGGER },
+        ],
+        powerSource: "mains",
+      };
+    case "simulation":
+      return {
+        // A ghost is a visitor's own presence. `sejour` addresses the default
+        // ghost, `g7:sejour` addresses ghost `g7`, so several visitors do not
+        // fight over one.
+        data: [{ key: "ghosts", type: "number", category: "generic" }],
+        orders: [{ key: "sim.ghost", type: "string" }],
         powerSource: "mains",
       };
   }

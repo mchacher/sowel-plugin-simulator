@@ -131,8 +131,14 @@ export function conditionForDay(ts: number, tz: string, seed: number): Condition
   return drawn;
 }
 
-export function weatherAt(ts: number, tz: string, seed: number): WeatherState {
-  const condition = conditionForDay(ts, tz, seed);
+/**
+ * @param forced a condition a visitor asked for (spec 002, FR3). It replaces the
+ * day's draw for everything downstream — cloud, rain, wind, pressure and the
+ * temperature anomaly — because a forced sky that did not change the production
+ * would be a picture rather than a simulation.
+ */
+export function weatherAt(ts: number, tz: string, seed: number, forced?: Condition): WeatherState {
+  const condition = forced ?? conditionForDay(ts, tz, seed);
   const day = dayNumber(ts, tz);
   const rng = rngFor(seed, day, "weather-detail");
 

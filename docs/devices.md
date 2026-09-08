@@ -173,6 +173,34 @@ binds is a motion sensor in a room, and that sensor fires because an occupant is
 The occupant devices exist for the 3D application and for debugging, which is why they
 sit under `generic` and expose no orders.
 
+### Simulation orders
+
+Orders no real device has, so a visitor can act on the world through the ordinary
+order path — bindings, aliases, audit log and WebSocket all apply unchanged.
+
+| Order                     | On                  | Value                      | Effect                                                        |
+| ------------------------- | ------------------- | -------------------------- | ------------------------------------------------------------- |
+| `sim.motion`              | motion sensors      | trigger                    | A motion pulse: the sensor reports occupancy for a hold time. |
+| `sim.open` / `sim.close`  | contacts            | trigger                    | The door opens for a few seconds, or closes now.              |
+| `sim.temperature`         | probes, thermostats | number, −10 to 40 °C       | Nudges the room and lets the thermal model bring it back.     |
+| `sim.weather`             | the outdoor module  | enum, the conditions above | Forces the sky for the rest of the local day.                 |
+| `sim.enter` / `sim.leave` | occupants           | trigger                    | Sends a household member home or out.                         |
+| `sim.ghost`               | `sim-house`         | `room` or `id:room`        | Places or moves an ephemeral visitor.                         |
+
+**They carry no category, deliberately.** A category is what every core consumer
+keys off, and these are none of the categories the core knows; giving them one
+would make a motion sensor look like an actuator in the binding dialog.
+Uncategorised they are extras — bound by hand when someone wants them, invisible
+otherwise.
+
+`sim-house` is the one device in the house that represents nothing physical. It
+exists because ghosts belong to no room, and it reports `ghosts` — how many
+visitors are about — under `generic`.
+
+**Visitors never move the household.** `sim.enter` and `sim.leave` exist for the
+3D application's own controls; the ordinary way a visitor makes presence is a
+ghost of their own, which expires two minutes after their last click.
+
 ## Conventions the simulator must honour
 
 **Echo every order.** Nothing in the core synthesises the confirmation. When an order

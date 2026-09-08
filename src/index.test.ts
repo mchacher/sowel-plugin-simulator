@@ -45,6 +45,13 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+const device = (sourceDeviceId: string) => ({
+  id: "d1",
+  integrationId: INTEGRATION_ID,
+  sourceDeviceId,
+  name: sourceDeviceId,
+});
+
 describe("the plugin", () => {
   it("declares the simulator identity and needs no credentials", () => {
     const { deps } = fakeDeps();
@@ -111,21 +118,67 @@ describe("the plugin", () => {
     expect(await run("1789")).not.toEqual(await run("2026"));
   });
 
-  it("acknowledges an order and ignores it — spec 002 gives it meaning", async () => {
-    const { deps, updates, logger } = fakeDeps(PARIS);
+  it("acts on an order and echoes it on the next tick, not from inside the order", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.parse("2026-06-22T09:00:00Z"));
+    const { deps, updates } = fakeDeps(PARIS);
     const plugin = createPlugin(deps);
     await plugin.start();
+
+    const lamp = device("sim-light-sejour");
     const before = updates.length;
-    const device = {
-      id: "d1",
-      integrationId: INTEGRATION_ID,
-      sourceDeviceId: "sim-light-sejour",
-      name: "Lampe",
-    };
-    await expect(plugin.executeOrder(device, "state", true)).resolves.toBeUndefined();
-    await expect(plugin.executeOrder(device, "sim.motion", true)).resolves.toBeUndefined();
-    expect(logger.debug).toHaveBeenCalled();
+    await plugin.executeOrder(lamp, "state", true);
+    // Nothing published from inside the order: an order and the physics that
+    // follow it cannot disagree if only one of them speaks.
     expect(updates.length).toBe(before);
+
+    await vi.advanceTimersByTimeAsync(2000);
+    const echo = updates.slice(before).filter((u) => u.id === "sim-light-sejour");
+    expect(echo.at(-1)?.payload).toEqual({ state: true });
+    await plugin.stop();
+  });
+
+  it("never throws, whatever an order says", async () => {
+    const { deps } = fakeDeps(PARIS);
+    const plugin = createPlugin(deps);
+    await plugin.start();
+    for (const [id, key, value] of [
+      ["sim-nowhere", "state", true],
+      ["sim-light-sejour", "nanoe", true],
+      ["sim-light-sejour", "state", { nope: 1 }],
+      ["sim-thermostat-sejour", "setpoint", "banana"],
+      ["sim-house", "sim.ghost", ""],
+    ] as const) {
+      await expect(plugin.executeOrder(device(id), key, value)).resolves.toBeUndefined();
+    }
+    await plugin.stop();
+  });
+
+  it("shrugs at an order that arrives before the world does", async () => {
+    const { deps, logger } = fakeDeps(PARIS);
+    const plugin = createPlugin(deps);
+    await expect(
+      plugin.executeOrder(device("sim-light-sejour"), "state", true),
+    ).resolves.toBeUndefined();
+    expect(logger.debug).toHaveBeenCalled();
+  });
+
+  it("logs and swallows an order that makes the world throw", async () => {
+    const { deps, logger } = fakeDeps(PARIS);
+    const plugin = createPlugin(deps);
+    await plugin.start();
+    (plugin as unknown as { orders: { execute: () => never } }).orders = {
+      execute: () => {
+        throw new Error("router exploded");
+      },
+    };
+    await expect(
+      plugin.executeOrder(device("sim-light-sejour"), "state", true),
+    ).resolves.toBeUndefined();
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ err: expect.any(Error) }),
+      "Order failed",
+    );
     await plugin.stop();
   });
 
