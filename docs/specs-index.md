@@ -11,11 +11,9 @@ here says which phase it serves.
 
 Status: 📝 Draft · 🚧 In progress · ✅ Shipped
 
-| #   | Title | Status | Summary |
-| --- | ----- | ------ | ------- |
-
-_No spec yet. The world model is phase 1 of the project map; write it with the
-`simulator-feature` skill, which creates the folder and the row together._
+| #   | Title                | Status | Summary                                                                                                                                                       |
+| --- | -------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 001 | The house that lives | 📝     | Phase 1, first of three. The deterministic world model — sun, weather, thermal, occupants, energy — published as the devices of `docs/devices.md`. Read-only. |
 
 ## How to use this index after context loss
 
