@@ -281,6 +281,10 @@ const devices: DeviceSpec[] = [
   { id: "sim-wind", archetype: "wind_gauge" },
   { id: "Weather Forecast", archetype: "forecast" },
 
+  // The only device that represents nothing physical: it carries the ghost
+  // orders, which belong to no room (spec 002, FR4).
+  { id: "sim-house", archetype: "simulation" },
+
   // Occupants — published for the 3D app and for debugging. Presence reaches
   // Sowel through the PIRs, not through these (spec 001, FR7).
   ...occupants.map((o): DeviceSpec => ({

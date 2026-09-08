@@ -1,6 +1,6 @@
 # Spec 002 — The house that obeys
 
-**Status**: 📝 Draft
+**Status**: ✅ Implemented
 **Phase**: 1 of the [showroom project map](https://github.com/mchacher/sowel-showroom/blob/main/docs/project-map.md) — second of its three specs
 **Builds on**: [spec 001](../001-world-model/) (the world model and its devices)
 
@@ -141,22 +141,22 @@ and a core engine acting through the ordinary order path.
 
 ## Acceptance criteria
 
-- [ ] AC1 — Every order in `docs/devices.md` has an effect on the model and an echo
+- [x] AC1 — Every order in `docs/devices.md` has an effect on the model and an echo
       on the reading. A test walks the catalogue and asserts both.
-- [ ] AC2 — A shutter ordered to 0 travels there over seconds and reports
+- [x] AC2 — A shutter ordered to 0 travels there over seconds and reports
       intermediate positions; `STOP` leaves it where it is.
-- [ ] AC3 — `sim.motion` makes the PIR report occupancy, and it clears after the
+- [x] AC3 — `sim.motion` makes the PIR report occupancy, and it clears after the
       hold time.
-- [ ] AC4 — A ghost placed by `sim.ghost` shows as occupancy in that room, expires
+- [x] AC4 — A ghost placed by `sim.ghost` shows as occupancy in that room, expires
       after two minutes, and the eleventh ghost drops the oldest rather than itself.
-- [ ] AC5 — Two orders on the same target inside the debounce window: the second is
+- [x] AC5 — Two orders on the same target inside the debounce window: the second is
       ignored. The same two on different targets both apply.
-- [ ] AC6 — `STOP` is never debounced.
-- [ ] AC7 — An unknown device, an unknown key and a wrong-typed value each resolve
+- [x] AC6 — `STOP` is never debounced.
+- [x] AC7 — An unknown device, an unknown key and a wrong-typed value each resolve
       without throwing and without changing anything.
-- [ ] AC8 — Closing the water heater's solar relay by order moves the grid clamp by
+- [x] AC8 — Closing the water heater's solar relay by order moves the grid clamp by
       its draw within one tick, and its clamp reports it.
-- [ ] AC9 — `npm run validate` is green.
+- [x] AC9 — `npm run validate` is green.
 
 ## Edge cases
 

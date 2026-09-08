@@ -1,11 +1,16 @@
 /**
- * The world (spec 001).
+ * The world (specs 001 and 002).
  *
  * Composes every model into one `WorldState` per tick and owns the only mutable
  * state in the plugin — the things that integrate. Nothing is written to disk:
  * at start the model is reconstructed by integrating from local midnight, which
  * is what makes a restart at 15:00 give a house that is at 15:00 rather than a
  * cold one, and what keeps the cumulative energy counters monotonic across it.
+ *
+ * Spec 002 adds the other direction: orders change the world here, and the
+ * reading follows on the next tick because the model changed. Nothing publishes
+ * from inside an order, so an order and the physics that follow it cannot
+ * disagree.
  */
 
 import { HOUSE } from "../house/house.js";
@@ -54,7 +59,21 @@ import {
 } from "./thermal.js";
 import { outdoorAt, outdoorRangeForDay, type OutdoorState } from "./outdoor.js";
 import { ORIENTATION_AZIMUTH } from "../house/types.js";
-import { forecast, weatherAt, type ForecastDay, type WeatherState } from "./weather.js";
+import {
+  forecast,
+  weatherAt,
+  type Condition,
+  type ForecastDay,
+  type WeatherState,
+} from "./weather.js";
+import {
+  DIMMER_RATE_PER_S,
+  GATE_PULSE_MS,
+  SHUTTER_RATE_PCT_PER_S,
+  Transitions,
+} from "./actuation.js";
+import { Ghosts } from "./ghosts.js";
+import { Overrides } from "./overrides.js";
 
 /** Integration step during warm-up and when catching up, seconds. */
 const WARMUP_STEP_S = 60;
@@ -114,6 +133,8 @@ export interface WorldState {
   };
   actuators: ActuatorStates;
   appliancesRunning: Record<string, boolean>;
+  /** Ephemeral visitors currently in the house (spec 002, FR4). */
+  ghostCount: number;
 }
 
 export class World {
@@ -133,6 +154,13 @@ export class World {
   private readonly heatingDevices = new Map<string, DeviceSpec>();
   /** The forecast changes once a day; it costs 120 model evaluations to build. */
   private forecastCache: { day: number; days: ForecastDay[] } | undefined;
+  private readonly transitions = new Transitions();
+  private readonly ghosts = new Ghosts();
+  private readonly overrides = new Overrides();
+  private readonly gatePulseUntil = new Map<string, number>();
+  private readonly roomIds: ReadonlySet<string>;
+  /** Room id → the motion sensor in it, so a pulse can be addressed by device. */
+  private readonly motionSensors = new Map<string, string>();
 
   constructor(
     private readonly config: WorldConfig,
@@ -144,6 +172,12 @@ export class World {
     for (const device of house.devices) {
       if (device.room && (device.archetype === "thermostat" || device.archetype === "heater")) {
         this.heatingDevices.set(device.room, device);
+      }
+    }
+    this.roomIds = new Set(house.rooms.map((room) => room.id));
+    for (const device of house.devices) {
+      if (device.room && (device.archetype === "motion" || device.archetype === "motion_lux")) {
+        this.motionSensors.set(device.room, device.id);
       }
     }
   }
@@ -160,7 +194,7 @@ export class World {
    */
   warmUp(now: number): void {
     const midnight = localMidnight(now, this.config.timezone);
-    const weather = weatherAt(midnight, this.config.timezone, this.config.seed);
+    const weather = this.weatherAtTs(midnight);
     const outdoor = this.outdoorAtTs(midnight, weather);
 
     this.rooms.clear();
@@ -180,6 +214,12 @@ export class World {
     this.lastOccupiedAt.clear();
     this.doorOpenUntil.clear();
     this.presence.clear();
+    this.transitions.clear();
+    this.gatePulseUntil.clear();
+    // A rebuild crosses a local midnight or a long gap, so the day-scoped
+    // overrides go with it. Motion pulses and ghosts are short enough to keep:
+    // a visitor who clicked a second before a rebuild should not see it lost.
+    this.overrides.clearDayScoped();
 
     for (let ts = midnight; ts < now; ts += WARMUP_STEP_S * 1000) {
       const next = Math.min(ts + WARMUP_STEP_S * 1000, now);
@@ -251,6 +291,201 @@ export class World {
     return this.snapshot(now);
   }
 
+  // ── The clock, bent only where a visitor bent it ───────────────────────────
+
+  private weatherAtTs(ts: number): WeatherState {
+    const { timezone, seed } = this.config;
+    return weatherAt(ts, timezone, seed, this.overrides.weatherFor(dayNumber(ts, timezone)));
+  }
+
+  /** The household, with any `sim.enter` / `sim.leave` applied. */
+  private occupantsAtTs(ts: number): OccupantState[] {
+    const { timezone, seed } = this.config;
+    const day = dayNumber(ts, timezone);
+    return occupantsAt(ts, timezone, this.house, seed).map((occupant) => {
+      const forced = this.overrides.occupantForced(occupant.id, day);
+      if (forced === undefined || forced === occupant.present) return occupant;
+      const spec = this.house.occupants.find((o) => o.id === occupant.id);
+      return forced
+        ? { ...occupant, place: spec?.bedroom ?? "sejour", present: true, asleep: false }
+        : { ...occupant, place: AWAY, present: false, asleep: false };
+    });
+  }
+
+  /** Rooms count ghosts as people: they light a PIR, breathe and warm the room. */
+  private occupancyIncludingGhosts(occupants: OccupantState[], now: number): Map<string, number> {
+    const counts = occupancyByRoom(occupants);
+    for (const [room, ghosts] of this.ghosts.byRoom(now)) {
+      counts.set(room, (counts.get(room) ?? 0) + ghosts);
+    }
+    return counts;
+  }
+
+  /** Advance whatever is travelling and release whatever was pulsed. */
+  private stepActuators(now: number, dtS: number): void {
+    for (const [deviceId, position] of this.transitions.step(dtS)) {
+      if (deviceId in this.actuators.shutters) {
+        this.actuators.shutters[deviceId] = position;
+        continue;
+      }
+      const dimmer = this.actuators.dimmers[deviceId];
+      if (dimmer) {
+        dimmer.brightness = position;
+        // A dimmer ramped to zero is a dimmer that has been switched off.
+        if (position <= 0) dimmer.on = false;
+      }
+    }
+    for (const [deviceId, until] of this.gatePulseUntil) {
+      if (until > now) continue;
+      this.actuators.gates[deviceId] = false;
+      this.gatePulseUntil.delete(deviceId);
+    }
+  }
+
+  // ── Orders (spec 002) ──────────────────────────────────────────────────────
+  //
+  // Each of these changes the world. Nothing publishes: the reading follows on
+  // the next tick, because the model changed.
+
+  setRelay(deviceId: string, on: boolean): void {
+    if (!(deviceId in this.actuators.relays)) return;
+    this.actuators.relays[deviceId] = on;
+  }
+
+  setValve(deviceId: string, open: boolean): void {
+    if (!(deviceId in this.actuators.valves)) return;
+    this.actuators.valves[deviceId] = open;
+  }
+
+  setRelayChannel(deviceId: string, index: number, on: boolean): void {
+    const channels = this.actuators.relayChannels[deviceId];
+    if (!channels || index < 0 || index >= channels.length) return;
+    channels[index] = on;
+  }
+
+  setDimmerPower(deviceId: string, on: boolean): void {
+    const dimmer = this.actuators.dimmers[deviceId];
+    if (!dimmer) return;
+    dimmer.on = on;
+    // Switching a dimmer on with nothing set is a lamp at full, like every
+    // real one; switching it off leaves the level alone so the next `on`
+    // returns to it.
+    this.transitions.start(
+      deviceId,
+      dimmer.brightness,
+      on ? Math.max(dimmer.brightness, 254) : 0,
+      DIMMER_RATE_PER_S,
+    );
+  }
+
+  setDimmerBrightness(deviceId: string, brightness: number): void {
+    const dimmer = this.actuators.dimmers[deviceId];
+    if (!dimmer) return;
+    const target = Math.max(0, Math.min(254, brightness));
+    // Setting a level on a dark lamp lights it. That is what every dimmer does.
+    if (target > 0) dimmer.on = true;
+    this.transitions.start(deviceId, dimmer.brightness, target, DIMMER_RATE_PER_S);
+  }
+
+  setShutterPosition(deviceId: string, position: number): void {
+    if (!(deviceId in this.actuators.shutters)) return;
+    this.transitions.start(
+      deviceId,
+      this.actuators.shutters[deviceId],
+      Math.max(0, Math.min(100, position)),
+      SHUTTER_RATE_PCT_PER_S,
+    );
+  }
+
+  moveShutter(deviceId: string, move: "OPEN" | "CLOSE" | "STOP"): void {
+    if (!(deviceId in this.actuators.shutters)) return;
+    if (move === "STOP") {
+      const stoppedAt = this.transitions.stop(deviceId);
+      if (stoppedAt !== undefined) this.actuators.shutters[deviceId] = stoppedAt;
+      return;
+    }
+    this.setShutterPosition(deviceId, move === "OPEN" ? 100 : 0);
+  }
+
+  /** A gate order is momentary: the contact closes and releases on its own. */
+  pulseGate(deviceId: string, now: number): void {
+    if (!(deviceId in this.actuators.gates)) return;
+    this.actuators.gates[deviceId] = true;
+    this.gatePulseUntil.set(deviceId, now + GATE_PULSE_MS);
+  }
+
+  setThermostatPower(deviceId: string, on: boolean): void {
+    const thermostat = this.actuators.thermostats[deviceId];
+    if (thermostat) thermostat.power = on;
+  }
+
+  setThermostatSetpoint(deviceId: string, setpointC: number): void {
+    const thermostat = this.actuators.thermostats[deviceId];
+    if (thermostat) thermostat.setpointC = setpointC;
+  }
+
+  setThermostatMode(deviceId: string, mode: string): void {
+    const thermostat = this.actuators.thermostats[deviceId];
+    if (!thermostat) return;
+    thermostat.operationMode = mode;
+    // `off` in the mode is a stop, on the units that report it that way.
+    if (mode === "off") thermostat.power = false;
+  }
+
+  setPoolSetpoint(setpointC: number): void {
+    this.actuators.poolSetpointC = setpointC;
+  }
+
+  setHeater(deviceId: string, on: boolean): void {
+    if (!(deviceId in this.actuators.heaters)) return;
+    this.actuators.heaters[deviceId] = on;
+  }
+
+  // ── Simulation orders (spec 002, FR3) ──────────────────────────────────────
+
+  simMotion(deviceId: string, now: number): void {
+    this.overrides.pulseMotion(deviceId, now);
+  }
+
+  simDoor(deviceId: string, open: boolean, now: number): void {
+    if (open) this.overrides.openDoor(deviceId, now);
+    else {
+      this.overrides.closeDoor(deviceId);
+      this.doorOpenUntil.delete(deviceId);
+    }
+  }
+
+  /**
+   * Nudge a room and let the physics take it from there. Nothing is held: the
+   * thermal model brings the room back on its own, which is the demonstration.
+   */
+  simTemperature(roomId: string, temperatureC: number): boolean {
+    const thermal = this.rooms.get(roomId);
+    if (!thermal) return false;
+    this.rooms.set(roomId, { ...thermal, temperatureC });
+    return true;
+  }
+
+  simWeather(condition: Condition, now: number): void {
+    this.overrides.forceWeather(condition, dayNumber(now, this.config.timezone));
+    this.forecastCache = undefined;
+  }
+
+  simOccupant(occupantId: string, present: boolean, now: number): boolean {
+    if (!this.house.occupants.some((o) => o.id === occupantId)) return false;
+    this.overrides.setOccupant(occupantId, present, dayNumber(now, this.config.timezone));
+    return true;
+  }
+
+  simGhost(id: string, room: string, now: number): boolean {
+    return this.ghosts.place(id, room, now, this.roomIds);
+  }
+
+  /** For the tests and for the 3D application's own view of who is about. */
+  get ghostState(): Ghosts {
+    return this.ghosts;
+  }
+
   private outdoorAtTs(ts: number, weather: WeatherState): OutdoorState {
     return outdoorAt(
       ts,
@@ -299,10 +534,12 @@ export class World {
     const { timezone, seed } = this.config;
     const { minutes } = localParts(ts, timezone);
     const sun = this.sunAt(ts);
-    const weather = weatherAt(ts, timezone, seed);
+    const weather = this.weatherAtTs(ts);
     const outdoor = this.outdoorAtTs(ts, weather);
-    const occupants = occupantsAt(ts, timezone, this.house, seed);
-    const byRoom = occupancyByRoom(occupants);
+    const occupants = this.occupantsAtTs(ts);
+    const byRoom = this.occupancyIncludingGhosts(occupants, ts);
+
+    this.stepActuators(ts, dtS);
 
     this.trackDoors(ts, occupants, outdoor);
 
@@ -454,10 +691,10 @@ export class World {
   private snapshot(now: number): WorldState {
     const { timezone, seed, latitude, longitude } = this.config;
     const sun = this.sunAt(now);
-    const weather = weatherAt(now, timezone, seed);
+    const weather = this.weatherAtTs(now);
     const outdoor = this.outdoorAtTs(now, weather);
-    const occupants = occupantsAt(now, timezone, this.house, seed);
-    const byRoom = occupancyByRoom(occupants);
+    const occupants = this.occupantsAtTs(now);
+    const byRoom = this.occupancyIncludingGhosts(occupants, now);
     const times = sunTimes(now, latitude, longitude, timezone);
 
     const rooms: Record<string, RoomState> = {};
@@ -467,6 +704,8 @@ export class World {
       if (!thermal || !air) continue;
       const here = byRoom.get(room.id) ?? 0;
       const lastSeen = this.lastOccupiedAt.get(room.id) ?? -Infinity;
+      const sensor = this.motionSensors.get(room.id);
+      const pulsed = sensor !== undefined && this.overrides.motionForced(sensor, now);
       rooms[room.id] = {
         id: room.id,
         temperatureC: thermal.temperatureC,
@@ -475,7 +714,7 @@ export class World {
         noiseDb: air.noiseDb,
         illuminanceLx: daylightLux(room, this.beamOnWindowsW(room, sun, weather.cloudFactor)),
         occupants: here,
-        occupied: here > 0 || now - lastSeen < MOTION_HOLD_S * 1000,
+        occupied: pulsed || here > 0 || now - lastSeen < MOTION_HOLD_S * 1000,
         heatingOn: thermal.heatingOn,
       };
     }
@@ -483,7 +722,8 @@ export class World {
     const contactsClosed: Record<string, boolean> = {};
     for (const device of this.house.devices) {
       if (device.archetype !== "contact") continue;
-      contactsClosed[device.id] = (this.doorOpenUntil.get(device.id) ?? 0) <= now;
+      const openedByTheHousehold = (this.doorOpenUntil.get(device.id) ?? 0) > now;
+      contactsClosed[device.id] = !openedByTheHousehold && !this.overrides.doorOpen(device.id, now);
     }
 
     const loads = loadPowers({
@@ -545,6 +785,7 @@ export class World {
       },
       actuators: this.actuators,
       appliancesRunning,
+      ghostCount: this.ghosts.count(now),
     };
   }
 }

@@ -128,3 +128,40 @@ One new archetype, `simulation`: a single house-level device carrying `sim.ghost
 and reporting `ghosts` (a count) so the 3D application can see how many are about.
 It has no room, and it is the only device in the house that represents nothing
 physical — which is exactly why it is one device and not a flag on sixty-six others.
+
+## How a simulation order actually reaches the plugin
+
+Verified on a stock Sowel 1.68.0, because the answer was not obvious and it
+changes what spec 003 has to build.
+
+**Sowel has no device-level order endpoint.** `POST /api/v1/devices/:id/...` does
+not dispatch anything; the only route that reaches a plugin's `executeOrder` is
+`POST /api/v1/equipments/:id/orders/:alias`. So a `sim.*` order is reachable only
+through an **equipment order binding**.
+
+That turns out to be fine, and it needs nothing from the core:
+
+```
+POST /equipments/<pir>/order-bindings  { deviceOrderId, alias: "sim.motion" }
+POST /equipments/<pir>/orders/sim.motion  { value: true }
+  → the PIR reports occupancy, and the zone's motion goes true
+```
+
+An order binding takes a free-form alias and does not require a category, which is
+exactly what an uncategorised order needs. Confirmed the same way for `sim.ghost`
+on the `sim-house` device bound to a `switch` equipment: the ghost appears in the
+kitchen and the `ghosts` reading goes to 1.
+
+**Two consequences, neither of them this spec's to carry.**
+
+- **Spec 003** must create those order bindings in the demo fixture. A simulation
+  order nobody bound is a simulation order nobody can call, and the 3D application
+  has no way to create bindings of its own.
+- **Phase 4** addresses a room by the equipment id of its sensor, not by a device
+  id. The mapping from a room in the 3D plan to an equipment is the fixture's, and
+  it belongs in the plan JSON the 3D application already needs.
+
+The alternative — asking the core for a device-order route — was not taken. The
+project map is explicit that anything the demo needs which the product does not
+offer is done in the plugin, the proxy or the 3D app, and this needed nothing at
+all.

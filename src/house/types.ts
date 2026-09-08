@@ -110,7 +110,9 @@ export type Archetype =
   | "rain_gauge"
   | "wind_gauge"
   | "forecast"
-  | "occupant";
+  | "occupant"
+  /** The one device in the house that represents nothing physical (spec 002). */
+  | "simulation";
 
 export interface DeviceSpec {
   /**

@@ -6,11 +6,14 @@
  * devices. Sowel's own recipes do the automation on top; nothing here knows what
  * a recipe is.
  *
- * Spec 001 (`specs/001-world-model/`) is the world. It publishes; it does not yet
- * listen: orders are logged and ignored until spec 002.
+ * Spec 001 (`specs/001-world-model/`) is the world it publishes; spec 002
+ * (`specs/002-orders/`) is the world listening — real orders, the `sim.*`
+ * simulation orders a visitor acts through, and the per-target debounce that
+ * keeps ten hands off one lamp.
  */
 
 import { HOUSE } from "./house/house.js";
+import { OrderRouter } from "./publish/orders.js";
 import { Publisher } from "./publish/publisher.js";
 import { Ticker } from "./world/clock.js";
 import { World } from "./world/world.js";
@@ -49,6 +52,7 @@ class SimulatorPlugin implements IntegrationPlugin {
   private status: IntegrationStatus = "disconnected";
   private world: World | undefined;
   private publisher: Publisher | undefined;
+  private orders: OrderRouter | undefined;
   private ticker: Ticker | undefined;
 
   constructor(private readonly deps: PluginDeps) {
@@ -117,6 +121,8 @@ class SimulatorPlugin implements IntegrationPlugin {
       seed,
     });
 
+    this.orders = new OrderRouter({ world: this.world, logger: this.logger, house: HOUSE });
+
     this.publisher.declareAll();
     this.world.warmUp(now);
     this.publisher.publish(this.world.advance(now), true);
@@ -147,19 +153,28 @@ class SimulatorPlugin implements IntegrationPlugin {
     this.ticker = undefined;
     this.world = undefined;
     this.publisher = undefined;
+    this.orders = undefined;
     this.status = "disconnected";
     this.logger.info("Simulator stopped");
   }
 
   /**
-   * Spec 002 gives orders meaning — real ones and the `sim.*` simulation orders.
-   * Until then an order is acknowledged and ignored, never an error.
+   * Change the world; the reading follows on the next tick because the model
+   * changed. Nothing is published from here.
+   *
+   * This is one of the methods the core rethrows from, so a throw would surface
+   * as a failed order in a visitor's face. It never throws.
    */
   async executeOrder(device: Device, orderKey: string, value: unknown): Promise<void> {
-    this.logger.debug(
-      { deviceId: device.sourceDeviceId, orderKey, value },
-      "Order received (spec 002 will act on it)",
-    );
+    try {
+      if (!this.orders) {
+        this.logger.debug({ orderKey }, "Order arrived before the world did");
+        return;
+      }
+      this.orders.execute(device.sourceDeviceId, orderKey, value);
+    } catch (err) {
+      this.logger.error({ err, deviceId: device.sourceDeviceId, orderKey }, "Order failed");
+    }
   }
 }
 

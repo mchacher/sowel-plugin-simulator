@@ -268,8 +268,11 @@ export class Publisher {
         // it, which is a simulation order and therefore spec 002.
         return { battery };
       case "relay":
-      case "valve":
         return { state: state.actuators.relays[device.id] ?? false };
+      case "valve":
+        // A valve keeps its own state, not the relays'. Reading `relays` here
+        // published `false` for ever, whatever the valve was actually doing.
+        return { state: state.actuators.valves[device.id] ?? false };
       case "heater":
         return { state: state.actuators.heaters[device.id] ?? false };
       case "relay_4ch": {
@@ -378,6 +381,8 @@ export class Publisher {
         const occupant = state.occupants.find((o) => o.id === device.occupant);
         return occupant && { zone: occupant.place, present: occupant.present };
       }
+      case "simulation":
+        return { ghosts: state.ghostCount };
     }
   }
 }

@@ -4,20 +4,20 @@ Branch: `feat/orders`. Scopes: `orders`, `world`, `devices`, `manifest`.
 
 ## Steps
 
-- [ ] **S1 — `world/actuation.ts`**: transitions in flight (shutter travel, dimmer
+- [x] **S1 — `world/actuation.ts`**: transitions in flight (shutter travel, dimmer
       ramp, gate pulse), stepped by the tick, re-targetable mid-travel.
-- [ ] **S2 — `world/ghosts.ts`**: place, move, expire, cap at ten dropping the oldest.
-- [ ] **S3 — overrides**: motion pulse, door, weather and occupant overrides, each
+- [x] **S2 — `world/ghosts.ts`**: place, move, expire, cap at ten dropping the oldest.
+- [x] **S3 — overrides**: motion pulse, door, weather and occupant overrides, each
       with its expiry; the temperature nudge applied once to the room's state.
-- [ ] **S4 — `world/world.ts`**: own the actuation and ghost state, fold ghosts into
+- [x] **S4 — `world/world.ts`**: own the actuation and ghost state, fold ghosts into
       occupancy, apply the overrides at the edges.
-- [ ] **S5 — `publish/catalogue.ts`**: the `sim.*` orders and the `simulation`
+- [x] **S5 — `publish/catalogue.ts`**: the `sim.*` orders and the `simulation`
       archetype, all uncategorised.
-- [ ] **S6 — `publish/orders.ts`**: resolve, coerce, debounce, apply.
-- [ ] **S7 — `src/index.ts`**: wire `executeOrder`; it still never throws.
-- [ ] **S8 — docs**: `docs/devices.md` gains the simulation orders; `docs/specs-index.md`
+- [x] **S6 — `publish/orders.ts`**: resolve, coerce, debounce, apply.
+- [x] **S7 — `src/index.ts`**: wire `executeOrder`; it still never throws.
+- [x] **S8 — docs**: `docs/devices.md` gains the simulation orders; `docs/specs-index.md`
       gains the row.
-- [ ] **S9 — the real instance**: install on a stock Sowel in Docker, bind a light, a
+- [x] **S9 — the real instance**: install on a stock Sowel in Docker, bind a light, a
       shutter and a thermostat, order them from the API, and watch the readings echo.
 
 ## Test plan
