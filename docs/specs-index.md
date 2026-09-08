@@ -13,7 +13,7 @@ Status: 📝 Draft · 🚧 In progress · ✅ Shipped
 
 | #   | Title                | Status | Summary                                                                                                                                                       |
 | --- | -------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 001 | The house that lives | 📝     | Phase 1, first of three. The deterministic world model — sun, weather, thermal, occupants, energy — published as the devices of `docs/devices.md`. Read-only. |
+| 001 | The house that lives | ✅     | Phase 1, first of three. The deterministic world model — sun, weather, thermal, occupants, energy — published as the devices of `docs/devices.md`. Read-only. |
 
 ## How to use this index after context loss
 

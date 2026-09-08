@@ -8,11 +8,25 @@ Uses:
 - documentation screenshots, which need a live instance rather than an inert fixture;
 - testing recipes and engines without hardware.
 
-Sensors also expose **simulation orders** no real device has (`sim.motion`, `sim.open`, `sim.temperature`, `sim.weather`, `sim.ghost`…), so a client can trigger presence in a room through the normal order path.
+Sensors will also expose **simulation orders** no real device has (`sim.motion`, `sim.open`, `sim.temperature`, `sim.weather`, `sim.ghost`…), so a client can trigger presence in a room through the normal order path. That is spec 002.
+
+## What it publishes
+
+Twelve rooms over two levels, four occupants on weekday and weekend agendas, a pool, and around sixty devices — every one of them an archetype from [`docs/devices.md`](docs/devices.md), which is the contract this plugin implements.
+
+The house is **alive at t = 0**: everything is declared and carries a plausible value within a second of starting, from any moment of any day. It holds no state on disk — the model is reconstructed by integrating from local midnight — so a restart at three in the afternoon gives a house that is at three in the afternoon rather than a cold one, and the day's energy counters stay monotonic across it.
+
+Given the same clock and the same seed it replays identically. Real time only: no accelerated clock, because the history has to stay coherent with what a visitor sees.
 
 ## Status
 
-Skeleton: the plugin starts, stops and reports its status. The world model is phase 1 of the [project map](https://github.com/mchacher/sowel-showroom/blob/main/docs/project-map.md).
+| Spec                          | What                                                     | State       |
+| ----------------------------- | -------------------------------------------------------- | ----------- |
+| [001](specs/001-world-model/) | The world model and the devices it publishes. Read-only. | Implemented |
+| 002                           | Order execution, `sim.*` orders, per-target debounce.    | Next        |
+| 003                           | The fixture remap script.                                | Planned     |
+
+The three are phase 1 of the [project map](https://github.com/mchacher/sowel-showroom/blob/main/docs/project-map.md).
 
 ## Development
 
