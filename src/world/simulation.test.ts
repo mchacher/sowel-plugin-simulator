@@ -24,7 +24,7 @@ describe("a visitor makes presence", () => {
     const w = world();
     expect(w.advance(EMPTY_HOUSE).rooms.sejour.occupied).toBe(false);
 
-    w.simMotion("sim-pir-sejour", EMPTY_HOUSE);
+    w.simMotion("sim-motion-lux-sejour-1", EMPTY_HOUSE);
     expect(w.advance(EMPTY_HOUSE + 1000).rooms.sejour.occupied).toBe(true);
     expect(w.advance(EMPTY_HOUSE + 30_000).rooms.sejour.occupied).toBe(true);
     expect(w.advance(EMPTY_HOUSE + 120_000).rooms.sejour.occupied).toBe(false);
@@ -66,7 +66,7 @@ describe("a visitor makes presence", () => {
 
   it("refuses a room the house does not have", () => {
     const w = world();
-    expect(w.simGhost("visitor", "cave", EMPTY_HOUSE)).toBe(false);
+    expect(w.simGhost("visitor", "donjon", EMPTY_HOUSE)).toBe(false);
     expect(w.advance(EMPTY_HOUSE + 1000).ghostCount).toBe(0);
   });
 
@@ -138,7 +138,7 @@ describe("a visitor nudges a room", () => {
   });
 
   it("shrugs at a room that is not in the house", () => {
-    expect(world().simTemperature("cave", 25)).toBe(false);
+    expect(world().simTemperature("donjon", 25)).toBe(false);
   });
 });
 

@@ -5,6 +5,8 @@ import { World } from "../world/world.js";
 import { declare } from "./catalogue.js";
 import { coerceBoolean, coerceEnum, coerceNumber, DEBOUNCE_MS, OrderRouter } from "./orders.js";
 
+const ROOM_IDS = HOUSE.rooms.map((room) => room.id);
+
 const CONFIG = { latitude: 48.8566, longitude: 2.3522, timezone: "Europe/Paris", seed: 1789 };
 const NOON = Date.parse("2026-06-21T11:00:00Z");
 
@@ -85,7 +87,7 @@ describe("every declared order does something", () => {
     const elsewhere = ["sim.motion", "sim.open", "sim.close", "sim.enter", "sim.leave"];
 
     for (const device of HOUSE.devices) {
-      for (const order of declare(device, HOUSE).orders) {
+      for (const order of declare(device, ROOM_IDS).orders) {
         if (elsewhere.includes(order.key) || order.key.startsWith("sim.")) continue;
 
         if (order.type === "boolean") {
@@ -115,7 +117,7 @@ describe("every declared order does something", () => {
   it("covers every simulation order somewhere", () => {
     const declared = new Set<string>();
     for (const device of HOUSE.devices) {
-      for (const order of declare(device, HOUSE).orders) {
+      for (const order of declare(device, ROOM_IDS).orders) {
         if (order.key.startsWith("sim.")) declared.add(order.key);
       }
     }
@@ -139,18 +141,18 @@ describe("orders change the world", () => {
   });
 
   it("switches a light and echoes it on the reading", () => {
-    h.router.execute("sim-light-sejour", "state", true);
-    expect(h.tick().actuators.relays["sim-light-sejour"]).toBe(true);
+    h.router.execute("sim-relay-sejour-1", "state", true);
+    expect(h.tick().actuators.relays["sim-relay-sejour-1"]).toBe(true);
     h.advance(DEBOUNCE_MS);
-    h.router.execute("sim-light-sejour", "state", "OFF");
-    expect(h.tick().actuators.relays["sim-light-sejour"]).toBe(false);
+    h.router.execute("sim-relay-sejour-1", "state", "OFF");
+    expect(h.tick().actuators.relays["sim-relay-sejour-1"]).toBe(false);
   });
 
   it("travels a shutter rather than teleporting it", () => {
-    h.router.execute("sim-shutter-sejour-sud", "position", 0);
+    h.router.execute("sim-shutter-sejour-1", "position", 0);
     const positions: number[] = [];
     for (let i = 0; i < 30; i++) {
-      positions.push(h.tick().actuators.shutters["sim-shutter-sejour-sud"]);
+      positions.push(h.tick().actuators.shutters["sim-shutter-sejour-1"]);
     }
     expect(positions[0]).toBeLessThan(100);
     expect(positions[0]).toBeGreaterThan(90);
@@ -158,27 +160,27 @@ describe("orders change the world", () => {
   });
 
   it("stops a shutter where it is, and never debounces the stop", () => {
-    h.router.execute("sim-shutter-sejour-sud", "position", 0);
+    h.router.execute("sim-shutter-sejour-1", "position", 0);
     h.tick(5000);
     // Well inside the debounce window, and it must still be obeyed.
-    h.router.execute("sim-shutter-sejour-sud", "state", "STOP");
-    const stopped = h.tick().actuators.shutters["sim-shutter-sejour-sud"];
+    h.router.execute("sim-shutter-sejour-1", "state", "STOP");
+    const stopped = h.tick().actuators.shutters["sim-shutter-sejour-1"];
     expect(stopped).toBeGreaterThan(70);
     expect(stopped).toBeLessThan(90);
-    expect(h.tick(10_000).actuators.shutters["sim-shutter-sejour-sud"]).toBe(stopped);
+    expect(h.tick(10_000).actuators.shutters["sim-shutter-sejour-1"]).toBe(stopped);
   });
 
   it("lights a dark lamp when a brightness is set on it", () => {
-    h.router.execute("sim-dimmer-sejour", "brightness", 200);
-    const dimmer = h.tick(2000).actuators.dimmers["sim-dimmer-sejour"];
+    h.router.execute("sim-dimmer-sejour-1", "brightness", 200);
+    const dimmer = h.tick(2000).actuators.dimmers["sim-dimmer-sejour-1"];
     expect(dimmer.on).toBe(true);
     expect(dimmer.brightness).toBe(200);
   });
 
   it("pulses a gate and lets it go on its own", () => {
-    h.router.execute("sim-gate", "R1", true);
-    expect(h.tick().actuators.gates["sim-gate"]).toBe(true);
-    expect(h.tick(3000).actuators.gates["sim-gate"]).toBe(false);
+    h.router.execute("sim-gate-1", "R1", true);
+    expect(h.tick().actuators.gates["sim-gate-1"]).toBe(true);
+    expect(h.tick(3000).actuators.gates["sim-gate-1"]).toBe(false);
   });
 
   it("clamps a setpoint instead of refusing it", () => {
@@ -188,9 +190,9 @@ describe("orders change the world", () => {
   });
 
   it("stops heating a room when its heater relay is opened", () => {
-    h.router.execute("sim-heater-bureau", "state", false);
+    h.router.execute("sim-heater-chambre-enfant-2-1", "state", false);
     const state = h.tick(600_000);
-    expect(state.actuators.heaters["sim-heater-bureau"]).toBe(false);
+    expect(state.actuators.heaters["sim-heater-chambre-enfant-2-1"]).toBe(false);
     expect(state.rooms.bureau.heatingOn).toBe(false);
   });
 
@@ -207,34 +209,34 @@ describe("orders change the world", () => {
 describe("the debounce", () => {
   it("ignores a second order on the same target inside the window", () => {
     const h = harness();
-    h.router.execute("sim-light-sejour", "state", true);
+    h.router.execute("sim-relay-sejour-1", "state", true);
     h.advance(500);
-    h.router.execute("sim-light-sejour", "state", false);
-    expect(h.tick().actuators.relays["sim-light-sejour"]).toBe(true);
+    h.router.execute("sim-relay-sejour-1", "state", false);
+    expect(h.tick().actuators.relays["sim-relay-sejour-1"]).toBe(true);
   });
 
   it("lets the same order through once the window has passed", () => {
     const h = harness();
-    h.router.execute("sim-light-sejour", "state", true);
+    h.router.execute("sim-relay-sejour-1", "state", true);
     h.advance(DEBOUNCE_MS + 100);
-    h.router.execute("sim-light-sejour", "state", false);
-    expect(h.tick().actuators.relays["sim-light-sejour"]).toBe(false);
+    h.router.execute("sim-relay-sejour-1", "state", false);
+    expect(h.tick().actuators.relays["sim-relay-sejour-1"]).toBe(false);
   });
 
   it("never makes two visitors in two rooms contend", () => {
     const h = harness();
-    h.router.execute("sim-light-sejour", "state", true);
-    h.router.execute("sim-light-cuisine", "state", true);
+    h.router.execute("sim-relay-sejour-1", "state", true);
+    h.router.execute("sim-relay-entree-1", "state", true);
     const state = h.tick();
-    expect(state.actuators.relays["sim-light-sejour"]).toBe(true);
-    expect(state.actuators.relays["sim-light-cuisine"]).toBe(true);
+    expect(state.actuators.relays["sim-relay-sejour-1"]).toBe(true);
+    expect(state.actuators.relays["sim-relay-entree-1"]).toBe(true);
   });
 
   it("keeps two keys on one device apart", () => {
     const h = harness();
-    h.router.execute("sim-dimmer-sejour", "state", true);
-    h.router.execute("sim-dimmer-sejour", "brightness", 100);
-    const dimmer = h.tick(2000).actuators.dimmers["sim-dimmer-sejour"];
+    h.router.execute("sim-dimmer-sejour-1", "state", true);
+    h.router.execute("sim-dimmer-sejour-1", "brightness", 100);
+    const dimmer = h.tick(2000).actuators.dimmers["sim-dimmer-sejour-1"];
     expect(dimmer.on).toBe(true);
     expect(dimmer.brightness).toBe(100);
   });
@@ -249,20 +251,20 @@ describe("nothing an order can say makes it throw", () => {
 
   it("shrugs at a key the device does not declare", () => {
     const h = harness();
-    expect(() => h.router.execute("sim-light-sejour", "nanoe", true)).not.toThrow();
+    expect(() => h.router.execute("sim-relay-sejour-1", "nanoe", true)).not.toThrow();
   });
 
   it("warns and changes nothing on a value it cannot read", () => {
     const h = harness();
-    h.router.execute("sim-light-sejour", "state", { nope: true });
+    h.router.execute("sim-relay-sejour-1", "state", { nope: true });
     expect(h.logger.warn).toHaveBeenCalled();
-    expect(h.tick().actuators.relays["sim-light-sejour"]).toBe(false);
+    expect(h.tick().actuators.relays["sim-relay-sejour-1"]).toBe(false);
   });
 
   it("does not let a rejected value start the debounce clock", () => {
     const h = harness();
-    h.router.execute("sim-light-sejour", "state", "banana");
-    h.router.execute("sim-light-sejour", "state", true);
-    expect(h.tick().actuators.relays["sim-light-sejour"]).toBe(true);
+    h.router.execute("sim-relay-sejour-1", "state", "banana");
+    h.router.execute("sim-relay-sejour-1", "state", true);
+    expect(h.tick().actuators.relays["sim-relay-sejour-1"]).toBe(true);
   });
 });

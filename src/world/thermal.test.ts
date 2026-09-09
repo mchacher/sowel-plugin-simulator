@@ -12,7 +12,7 @@ import {
 } from "./thermal.js";
 
 const SEJOUR = roomById("sejour");
-const CHAMBRE = roomById("chambre-1");
+const CHAMBRE = roomById("chambre-enfant-1");
 
 function run(
   room: Room,

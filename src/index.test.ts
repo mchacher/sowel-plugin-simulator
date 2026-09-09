@@ -125,7 +125,7 @@ describe("the plugin", () => {
     const plugin = createPlugin(deps);
     await plugin.start();
 
-    const lamp = device("sim-light-sejour");
+    const lamp = device("sim-relay-sejour-1");
     const before = updates.length;
     await plugin.executeOrder(lamp, "state", true);
     // Nothing published from inside the order: an order and the physics that
@@ -133,7 +133,7 @@ describe("the plugin", () => {
     expect(updates.length).toBe(before);
 
     await vi.advanceTimersByTimeAsync(2000);
-    const echo = updates.slice(before).filter((u) => u.id === "sim-light-sejour");
+    const echo = updates.slice(before).filter((u) => u.id === "sim-relay-sejour-1");
     expect(echo.at(-1)?.payload).toEqual({ state: true });
     await plugin.stop();
   });
@@ -144,8 +144,8 @@ describe("the plugin", () => {
     await plugin.start();
     for (const [id, key, value] of [
       ["sim-nowhere", "state", true],
-      ["sim-light-sejour", "nanoe", true],
-      ["sim-light-sejour", "state", { nope: 1 }],
+      ["sim-relay-sejour-1", "nanoe", true],
+      ["sim-relay-sejour-1", "state", { nope: 1 }],
       ["sim-thermostat-sejour", "setpoint", "banana"],
       ["sim-house", "sim.ghost", ""],
     ] as const) {
@@ -158,7 +158,7 @@ describe("the plugin", () => {
     const { deps, logger } = fakeDeps(PARIS);
     const plugin = createPlugin(deps);
     await expect(
-      plugin.executeOrder(device("sim-light-sejour"), "state", true),
+      plugin.executeOrder(device("sim-relay-sejour-1"), "state", true),
     ).resolves.toBeUndefined();
     expect(logger.debug).toHaveBeenCalled();
   });
@@ -173,7 +173,7 @@ describe("the plugin", () => {
       },
     };
     await expect(
-      plugin.executeOrder(device("sim-light-sejour"), "state", true),
+      plugin.executeOrder(device("sim-relay-sejour-1"), "state", true),
     ).resolves.toBeUndefined();
     expect(logger.error).toHaveBeenCalledWith(
       expect.objectContaining({ err: expect.any(Error) }),

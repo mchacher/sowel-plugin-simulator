@@ -8,7 +8,7 @@
  * thermostat card. **The category is the contract.**
  */
 
-import type { Archetype, DeviceSpec, House } from "../house/types.js";
+import type { Archetype, DeviceSpec } from "../house/types.js";
 import type { DiscoveredDevice } from "../sowel-api.js";
 
 /**
@@ -94,7 +94,11 @@ const SIM_TRIGGER = { type: "boolean" } as const;
 
 type Declaration = Omit<DiscoveredDevice, "friendlyName">;
 
-function declarationFor(archetype: Archetype, device: DeviceSpec, house: House): Declaration {
+function declarationFor(
+  archetype: Archetype,
+  device: DeviceSpec,
+  roomIds: readonly string[],
+): Declaration {
   switch (archetype) {
     case "motion":
       return {
@@ -430,7 +434,7 @@ function declarationFor(archetype: Archetype, device: DeviceSpec, house: House):
             key: "zone",
             type: "enum",
             category: "generic",
-            enumValues: [...house.rooms.map((r) => r.id), "away"],
+            enumValues: [...roomIds, "away"],
           },
           { key: "present", type: "boolean", category: "generic" },
         ],
@@ -452,9 +456,15 @@ function declarationFor(archetype: Archetype, device: DeviceSpec, house: House):
   }
 }
 
-/** The full discovery declaration for one device of the house. */
-export function declare(device: DeviceSpec, house: House): DiscoveredDevice {
-  const declaration = declarationFor(device.archetype, device, house);
+/**
+ * The full discovery declaration for one device of the house.
+ *
+ * It takes the room ids rather than the whole house so that the generator can
+ * call it before the device list exists — which is the one thing it must be able
+ * to do, since it is the device list it produces.
+ */
+export function declare(device: DeviceSpec, roomIds: readonly string[]): DiscoveredDevice {
+  const declaration = declarationFor(device.archetype, device, roomIds);
   return {
     friendlyName: device.id,
     manufacturer: "Sowel",
@@ -464,7 +474,7 @@ export function declare(device: DeviceSpec, house: House): DiscoveredDevice {
 }
 
 /** Every key an archetype declares, data and orders. */
-export function declaredKeys(device: DeviceSpec, house: House): string[] {
-  const declaration = declare(device, house);
+export function declaredKeys(device: DeviceSpec, roomIds: readonly string[]): string[] {
+  const declaration = declare(device, roomIds);
   return [...declaration.data.map((d) => d.key), ...declaration.orders.map((o) => o.key)];
 }

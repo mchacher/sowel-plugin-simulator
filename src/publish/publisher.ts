@@ -84,6 +84,7 @@ export interface PublisherOptions {
 
 export class Publisher {
   private readonly house: House;
+  private readonly roomIds: readonly string[];
   private readonly declarations = new Map<string, DiscoveredDevice>();
   private readonly categories = new Map<string, Map<string, string>>();
   private readonly last = new Map<string, Map<string, Published>>();
@@ -92,8 +93,9 @@ export class Publisher {
 
   constructor(private readonly options: PublisherOptions) {
     this.house = options.house ?? HOUSE;
+    this.roomIds = this.house.rooms.map((room) => room.id);
     for (const device of this.house.devices) {
-      const declaration = declare(device, this.house);
+      const declaration = declare(device, this.roomIds);
       this.declarations.set(device.id, declaration);
       const byKey = new Map<string, string>();
       for (const entry of declaration.data) byKey.set(entry.key, entry.category);
@@ -294,11 +296,14 @@ export class Publisher {
         return { R1: state.actuators.gates[device.id] ?? false };
       case "thermostat": {
         const thermostat = state.actuators.thermostats[device.id];
-        if (!thermostat || !room) return undefined;
+        if (!thermostat) return undefined;
+        // The house's own heat pump has no room: what it measures is the mean of
+        // the rooms it serves, which is also what it behaves like.
+        const temperatureC = room ? room.temperatureC : state.houseTemperatureC;
         return {
-          temperature: this.round(room.temperatureC, 1),
+          temperature: this.round(temperatureC, 1),
           setpoint: this.round(thermostat.setpointC, 1),
-          state: thermostat.power && room.heatingOn,
+          state: thermostat.power && (room ? room.heatingOn : state.houseHeatingOn),
           operationMode: thermostat.operationMode,
           outsideTemperature: this.round(state.outdoor.temperatureC, 1),
         };

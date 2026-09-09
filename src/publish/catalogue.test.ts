@@ -11,6 +11,8 @@ import {
   SIMULATED_OPERATION_MODES,
 } from "./catalogue.js";
 
+const ROOM_IDS = HOUSE.rooms.map((room) => room.id);
+
 const CATALOGUE_DOC = readFileSync(new URL("../../docs/devices.md", import.meta.url), "utf8");
 
 const find = (archetype: DeviceSpec["archetype"]): DeviceSpec => {
@@ -19,7 +21,7 @@ const find = (archetype: DeviceSpec["archetype"]): DeviceSpec => {
   return device;
 };
 
-const declarationOf = (archetype: DeviceSpec["archetype"]) => declare(find(archetype), HOUSE);
+const declarationOf = (archetype: DeviceSpec["archetype"]) => declare(find(archetype), ROOM_IDS);
 const dataOf = (archetype: DeviceSpec["archetype"], key: string) =>
   declarationOf(archetype).data.find((d) => d.key === key);
 const orderOf = (archetype: DeviceSpec["archetype"], key: string) =>
@@ -31,7 +33,7 @@ describe("the catalogue matches docs/devices.md", () => {
     // that is not there is drift, whichever of the two is wrong.
     const undocumented = new Set<string>();
     for (const device of HOUSE.devices) {
-      for (const key of declaredKeys(device, HOUSE)) {
+      for (const key of declaredKeys(device, ROOM_IDS)) {
         // Two families are documented as patterns rather than one row each: the
         // forecast's five days, and the multi-channel relay's channels.
         const documented = key.replace(/^j[1-5]_/, "j{i}_").replace(/^power[23]$/, "power1");
@@ -43,7 +45,7 @@ describe("the catalogue matches docs/devices.md", () => {
 
   it("puts every reading in a category, and never leaves an enum without a vocabulary", () => {
     for (const device of HOUSE.devices) {
-      const declaration = declare(device, HOUSE);
+      const declaration = declare(device, ROOM_IDS);
       for (const entry of declaration.data) {
         expect(entry.category, `${device.id}.${entry.key}`).toBeTruthy();
         if (entry.type === "enum") {
@@ -68,7 +70,7 @@ describe("the catalogue matches docs/devices.md", () => {
 
   it("publishes no configuration noise and no vendor vocabulary", () => {
     for (const device of HOUSE.devices) {
-      for (const key of declaredKeys(device, HOUSE)) {
+      for (const key of declaredKeys(device, ROOM_IDS)) {
         expect(PROHIBITED_KEYS, `${device.id} publishes ${key}`).not.toContain(key);
       }
     }
@@ -78,7 +80,7 @@ describe("the catalogue matches docs/devices.md", () => {
     const ids = HOUSE.devices.map((d) => d.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const device of HOUSE.devices) {
-      const declaration = declare(device, HOUSE);
+      const declaration = declare(device, ROOM_IDS);
       expect(declaration.friendlyName).toBe(device.id);
       expect(declaration.data.length + declaration.orders.length).toBeGreaterThan(0);
     }
@@ -127,9 +129,17 @@ describe("the categories the core actually keys off", () => {
   it("declares a relay as a boolean rather than an enum of two strings", () => {
     // Core issue #930: the same relay arriving in two shapes is why eighteen
     // modules downstream defend against both.
-    for (const archetype of ["relay", "relay_4ch"] as const) {
-      for (const entry of declarationOf(archetype).data) expect(entry.type).toBe("boolean");
-      for (const order of declarationOf(archetype).orders) expect(order.type).toBe("boolean");
+    // `relay_4ch` is not in the demo house — the reference installation has no
+    // multi-channel relay — so it is asserted against a spec of its own rather
+    // than skipped, because the declaration is still part of the catalogue.
+    for (const device of [
+      find("relay"),
+      { id: "probe-4ch", archetype: "relay_4ch" as const, channels: 4 },
+    ]) {
+      const declaration = declare(device, ROOM_IDS);
+      for (const entry of declaration.data) expect(entry.type).toBe("boolean");
+      for (const order of declaration.orders) expect(order.type).toBe("boolean");
+      expect(declaration.data.length).toBeGreaterThan(0);
     }
   });
 

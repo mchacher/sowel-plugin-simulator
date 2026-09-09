@@ -52,7 +52,7 @@ describe("a ghost", () => {
 
   it("refuses a room the house does not have", () => {
     const ghosts = new Ghosts();
-    expect(ghosts.place("visitor", "cave", T0, ROOMS)).toBe(false);
+    expect(ghosts.place("visitor", "donjon", T0, ROOMS)).toBe(false);
     expect(ghosts.count(T0)).toBe(0);
   });
 });

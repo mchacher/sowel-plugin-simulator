@@ -65,6 +65,7 @@ export interface OrderRouterOptions {
 
 export class OrderRouter {
   private readonly house: House;
+  private readonly roomIds: readonly string[];
   private readonly devices = new Map<string, DeviceSpec>();
   private readonly orders = new Map<string, Map<string, DiscoveredOrder>>();
   private readonly lastAccepted = new Map<string, number>();
@@ -72,11 +73,12 @@ export class OrderRouter {
 
   constructor(private readonly options: OrderRouterOptions) {
     this.house = options.house ?? HOUSE;
+    this.roomIds = this.house.rooms.map((room) => room.id);
     this.now = options.now ?? Date.now;
     for (const device of this.house.devices) {
       this.devices.set(device.id, device);
       const byKey = new Map<string, DiscoveredOrder>();
-      for (const order of declare(device, this.house).orders) byKey.set(order.key, order);
+      for (const order of declare(device, this.roomIds).orders) byKey.set(order.key, order);
       this.orders.set(device.id, byKey);
     }
   }

@@ -125,6 +125,8 @@ export function stepRoom(
  */
 export function initialTemperatureC(room: Room, outdoorC: number): number {
   if (room.outdoor) return outdoorC;
+  // A cellar starts near the ground it sits in, which is roughly its setpoint.
+  if (room.groundCoupled) return room.setpointC;
   if (room.heating === "none") return (outdoorC * 2 + room.setpointC) / 3;
   return room.setpointC - 0.5;
 }

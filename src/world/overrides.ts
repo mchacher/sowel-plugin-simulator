@@ -25,12 +25,18 @@ export class Overrides {
 
   // — motion ————————————————————————————————————————————————
 
-  pulseMotion(deviceId: string, now: number, durationMs = MOTION_PULSE_MS): void {
-    this.motionUntil.set(deviceId, now + durationMs);
+  /**
+   * A pulse is keyed by **room**, not by sensor. A visitor clicking a room means
+   * "there is someone in here", and the living room has three motion sensors —
+   * pulsing only the one that was addressed would leave the other two insisting
+   * the room is empty.
+   */
+  pulseMotion(roomId: string, now: number, durationMs = MOTION_PULSE_MS): void {
+    this.motionUntil.set(roomId, now + durationMs);
   }
 
-  motionForced(deviceId: string, now: number): boolean {
-    return (this.motionUntil.get(deviceId) ?? 0) > now;
+  motionForced(roomId: string, now: number): boolean {
+    return (this.motionUntil.get(roomId) ?? 0) > now;
   }
 
   // — doors ——————————————————————————————————————————————————

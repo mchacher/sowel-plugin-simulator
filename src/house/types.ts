@@ -22,27 +22,45 @@ export interface Window {
 /**
  * How a room is heated.
  *
- * `trv` is a thermostatic radiator valve: no Sowel device, it simply holds the
- * room near its setpoint the way a real valve does. Without it the whole house
- * would drift cold and the demo would look broken, which would be a worse lie
- * than the simplification.
+ * - `thermostat` — a local unit with its own setpoint, like the living room's stove.
+ * - `heater` — a local electric radiator, switched but not regulated.
+ * - `trv` — a thermostatic radiator valve on the house's own heat pump. No Sowel
+ *   device of its own: it follows the **house** setpoint, offset by
+ *   `setpointOffsetK`, the way a real valve does. A bedroom is cooler than a
+ *   living room because its valve is turned down, not because it has its own
+ *   thermostat.
+ * - `none` — unheated. A garage, a cellar, a workshop.
  */
 export type HeatingKind = "thermostat" | "heater" | "trv" | "none";
 
 export interface Room {
   id: string;
   label: string;
-  level: 0 | 1;
+  /** −1 basement, 0 ground, 1 and 2 upstairs. `null` outdoors. */
+  level: number | null;
   floorAreaM2: number;
   /** Heat loss to outdoors, W per kelvin. */
   lossWPerK: number;
   /** Effective thermal capacity, J per kelvin. Divided by lossWPerK it is τ. */
   capacityJPerK: number;
+  /**
+   * Where the room wants to be. On a `trv` room this is derived from the house
+   * setpoint and `setpointOffsetK`, so it is a record of intent rather than a
+   * control: turn the house heat pump down and every valve follows.
+   */
   setpointC: number;
+  /** Kelvin this room's valve sits below the house setpoint. */
+  setpointOffsetK?: number;
   heating: HeatingKind;
   windows: Window[];
   /** A room that is outdoors and simply tracks the outdoor model. */
   outdoor?: boolean;
+  /**
+   * A room surrounded by earth rather than by air. It loses heat to the ground,
+   * which keeps the annual mean and a quarter of its swing — which is why a
+   * cellar sits near 12 °C in January as well as in July.
+   */
+  groundCoupled?: boolean;
 }
 
 export type OccupantKind = "adult" | "child";
@@ -155,6 +173,17 @@ export interface PoolSpec {
 
 export interface House {
   rooms: Room[];
+  /**
+   * The device id of the house's own heat pump (spec 003).
+   *
+   * It has no room: it serves every `trv` room at once, which is what a single
+   * air-to-water unit with thermostatic valves actually is. Its setpoint is the
+   * house setpoint, each room sits `setpointOffsetK` below it, and its
+   * temperature reading is the area-weighted average of the rooms it serves —
+   * which is also, correctly, what the zone aggregator folds into the house
+   * average.
+   */
+  houseThermostatDeviceId: string;
   occupants: Occupant[];
   devices: DeviceSpec[];
   loads: LoadSpec[];
