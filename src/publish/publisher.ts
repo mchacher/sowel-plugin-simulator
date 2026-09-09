@@ -274,7 +274,7 @@ export class Publisher {
       case "valve":
         // A valve keeps its own state, not the relays'. Reading `relays` here
         // published `false` for ever, whatever the valve was actually doing.
-        return { state: state.actuators.valves[device.id] ?? false };
+        return { state: state.actuators.valves[device.id] ?? false, battery };
       case "heater":
         return { state: state.actuators.heaters[device.id] ?? false };
       case "relay_4ch": {
@@ -313,6 +313,7 @@ export class Publisher {
           water_temperature: this.round(state.pool.waterTemperatureC, 2),
           outdoor_temperature: this.round(state.outdoor.temperatureC, 1),
           setpoint: this.round(state.pool.setpointC, 1),
+          state: state.pool.heatPumpOn,
         };
       case "grid_clamp": {
         const { gridW, voltageV, counters } = state.energy;
@@ -340,6 +341,7 @@ export class Publisher {
         return {
           power: this.round(state.energy.productionW, 0),
           energy: this.round(this.delta(device.id, "energy", state.energy.counters.producedWh), 2),
+          energy_forward: this.round(state.energy.counters.producedWh, 1),
         };
       case "metered_appliance": {
         if (!device.load) return undefined;

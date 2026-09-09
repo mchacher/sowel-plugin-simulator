@@ -242,9 +242,10 @@ function declarationFor(
       };
     case "valve":
       return {
-        data: [{ key: "state", type: "boolean", category: "light_state" }],
+        data: [{ key: "state", type: "boolean", category: "light_state" }, battery],
         orders: [{ key: "state", type: "boolean", category: "light_toggle" }],
-        powerSource: "mains",
+        // An irrigation valve in a garden has no mains next to it.
+        powerSource: "battery",
       };
     case "thermostat":
       return {
@@ -312,6 +313,9 @@ function declarationFor(
             unit: "°C",
           },
           { key: "setpoint", type: "number", category: "pool_temperature_setpoint", unit: "°C" },
+          // Whether the unit is actually running. The model knows; the card shows
+          // it; and without it the fixture's own state binding has nowhere to go.
+          { key: "state", type: "boolean", category: "light_state" },
         ],
         orders: [
           {
@@ -341,11 +345,23 @@ function declarationFor(
         powerSource: "mains",
       };
     case "subload_clamp":
+      return {
+        data: [
+          { key: "power", type: "number", category: "power", unit: "W" },
+          { key: "energy", type: "number", category: "energy", unit: "Wh" },
+        ],
+        orders: [],
+        powerSource: "mains",
+      };
     case "pv":
       return {
         data: [
           { key: "power", type: "number", category: "power", unit: "W" },
           { key: "energy", type: "number", category: "energy", unit: "Wh" },
+          // The production total. A clamp on an inverter measures both
+          // directions, but an inverter only ever produces, so there is no
+          // `energy_reverse` here and a binding for one is correctly dropped.
+          { key: "energy_forward", type: "number", category: "energy", unit: "Wh" },
         ],
         orders: [],
         powerSource: "mains",
