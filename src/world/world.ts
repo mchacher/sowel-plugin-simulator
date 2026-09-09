@@ -22,7 +22,7 @@ import {
   type ActuatorStates,
 } from "./actuators.js";
 import { initialAir, daylightLux, stepAir, type AirState } from "./air.js";
-import { applianceRunning, inOffPeak, loadPowers, poolPumpScheduled } from "./appliances.js";
+import { applianceRunning, inOffPeak, loadPowers, poolPumpAssumedRunning } from "./appliances.js";
 import { dayNumber, localMidnight, localParts } from "./clock.js";
 import {
   accumulate,
@@ -257,7 +257,9 @@ export class World {
           outdoorC: outdoor.temperatureC,
           windKmh: weather.windKmh,
           solarGainW: poolSolarGainW(this.house.pool, sun, weather.cloudFactor),
-          pumpRunning: poolPumpScheduled(localParts(ts, this.config.timezone).minutes),
+          // The warm-up reconstructs a past the plugin was not there for, so the
+          // pump's hours are an assumption here and only here.
+          pumpRunning: poolPumpAssumedRunning(localParts(ts, this.config.timezone).minutes),
           setpointC: this.actuators.poolSetpointC,
           coverOpenFraction: shutterOpenFraction(this.actuators, POOL_COVER_DEVICE_ID),
         },
@@ -635,8 +637,9 @@ export class World {
       );
     }
 
-    const poolPumpOn =
-      (this.actuators.relays["sim-relay-pool-pump"] ?? true) && poolPumpScheduled(minutes);
+    // Its relay and nothing else. A recipe schedules it, the arbiter's claimant may
+    // ask for it, a visitor can switch it — the simulator only reports the water.
+    const poolPumpOn = this.actuators.relays["sim-relay-pool-pump"] ?? false;
     const coverOpen = shutterOpenFraction(this.actuators, POOL_COVER_DEVICE_ID);
     this.pool = stepPool(
       this.house.pool,

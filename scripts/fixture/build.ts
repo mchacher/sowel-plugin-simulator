@@ -514,7 +514,7 @@ function addSurplusRecipe(tables: Record<string, Row[]>): void {
  * equipments out of eighty-six therefore restored as three nulls, and the
  * arbiter came up with nothing enrolled and no error anywhere.
  *
- * Filed upstream as mchacher/sowel#938. Until a restore reads the union of keys,
+ * Filed upstream as mchacher/sowel#939. Until a restore reads the union of keys,
  * a fixture has to hand it rows that are already uniform.
  */
 function uniformColumns(tables: Record<string, Row[]>): void {
@@ -611,7 +611,7 @@ function verify(tables: Record<string, Row[]>, droppedEquipmentIds: string[]): s
   }
 
   // The restore reads its column list from the first row of each table, so a
-  // ragged table loses columns without saying so (#938). Check for raggedness
+  // ragged table loses columns without saying so (#939). Check for raggedness
   // here, where it is still cheap to see.
   for (const [name, rows] of Object.entries(tables)) {
     if (rows.length < 2) continue;

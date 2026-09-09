@@ -10,7 +10,7 @@ import {
   pvProductionW,
 } from "./energy.js";
 import { sunPosition } from "./sun.js";
-import { inOffPeak, poolPumpScheduled } from "./appliances.js";
+import { inOffPeak, poolPumpAssumedRunning } from "./appliances.js";
 import {
   boostStorageWh,
   initialWaterHeaterState,
@@ -203,9 +203,13 @@ describe("the thermodynamic tank", () => {
     expect(morning.temperatureC).toBeLessThan(WATER_HEATER.targetC - WATER_HEATER.hysteresisK);
   });
 
-  it("runs the pool pump on its built-in timer", () => {
-    expect(poolPumpScheduled(12 * 60)).toBe(true);
-    expect(poolPumpScheduled(6 * 60)).toBe(false);
-    expect(poolPumpScheduled(20 * 60)).toBe(false);
+  it("assumes the pool pump's past hours without scheduling its present ones", () => {
+    // The assumption exists for the pool's twelve-day warm-up, which reconstructs
+    // a past the plugin was not there for. It is not a timer the plugin obeys:
+    // the pump's hours belong to a recipe, and a load running without a grant
+    // looks to the energy arbiter exactly like a hand on a wall switch.
+    expect(poolPumpAssumedRunning(12 * 60)).toBe(true);
+    expect(poolPumpAssumedRunning(6 * 60)).toBe(false);
+    expect(poolPumpAssumedRunning(20 * 60)).toBe(false);
   });
 });

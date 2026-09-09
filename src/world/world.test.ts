@@ -122,12 +122,32 @@ describe("what the house looks like", () => {
     }
   });
 
-  it("runs the pool pump on its timer and warms the water while it does", () => {
-    const morning = at("2026-06-21T07:00:00Z");
-    const midday = at("2026-06-21T11:30:00Z");
-    expect(morning.energy.loads["pool-pump"]).toBe(0);
-    expect(midday.energy.loads["pool-pump"]).toBeGreaterThan(0);
-    expect(midday.pool.waterTemperatureC).toBeGreaterThan(15);
+  it("leaves the pool pump alone until something closes its relay", () => {
+    // The simulator schedules nothing: the pump's hours are a recipe's, and the
+    // arbiter may claim it. A simulator that ran it on its own would look to
+    // spec 140 like a hand on a wall switch, and the arbiter would suspend
+    // itself on that load — which it did, on a real instance.
+    const world = new World(CONFIG, HOUSE);
+    const midday = Date.parse("2026-06-21T11:30:00Z");
+    world.warmUp(midday);
+    expect(world.advance(midday).energy.loads["pool-pump"]).toBe(0);
+
+    world.setRelay("sim-relay-pool-pump", true);
+    const running = world.advance(midday + 1000);
+    expect(running.energy.loads["pool-pump"]).toBeGreaterThan(0);
+    // And the water is where twelve days of reconstructed history put it.
+    expect(running.pool.waterTemperatureC).toBeGreaterThan(15);
+  });
+
+  it("cannot heat the pool while its pump is off", () => {
+    // A pool heat pump is interlocked on flow. Granting it surplus without the
+    // pump would buy nothing, which is why the pump sits above it in the
+    // arbiter's priority list.
+    const world = new World(CONFIG, HOUSE);
+    const midday = Date.parse("2026-06-21T11:30:00Z");
+    world.warmUp(midday);
+    expect(world.advance(midday).pool.heatPumpOn).toBe(false);
+    expect(world.advance(midday).energy.loads["pool-heat-pump"]).toBe(0);
   });
 
   it("keeps every room habitable all year", () => {
