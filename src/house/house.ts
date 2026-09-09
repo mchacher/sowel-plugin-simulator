@@ -197,7 +197,14 @@ const occupants: Occupant[] = [
  */
 const loads: LoadSpec[] = [
   { id: "heat-pump", label: "Pompe à chaleur", nominalW: 2000, arbiterClass: "comfort" },
-  { id: "water-heater", label: "Ballon d'eau chaude", nominalW: 2400, arbiterClass: "deferrable" },
+  {
+    id: "water-heater",
+    label: "Ballon thermodynamique",
+    // A heat pump, not a resistance: 600 W drawn for 1 800 W of heat. The surplus
+    // input raises its target from 55 to 62 °C rather than switching it on.
+    nominalW: 600,
+    arbiterClass: "deferrable",
+  },
   { id: "pool-pump", label: "Pompe piscine", nominalW: 750, arbiterClass: "deferrable" },
   {
     id: "pool-heat-pump",
@@ -245,6 +252,7 @@ const devices: DeviceSpec[] = [
   { id: "sim-shutter-chambre-parents", archetype: "shutter", room: "chambre-parents" },
   { id: "sim-shutter-chambre-1", archetype: "shutter", room: "chambre-1" },
   { id: "sim-shutter-chambre-2", archetype: "shutter", room: "chambre-2" },
+  { id: "sim-pool-cover", archetype: "pool_cover" },
   { id: "sim-gate", archetype: "gate" },
   { id: "sim-valve-jardin", archetype: "valve" },
 

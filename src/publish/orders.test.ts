@@ -199,8 +199,8 @@ describe("orders change the world", () => {
     const before = h.tick();
     h.router.execute("sim-relay-water-heater-solar", "state", true);
     const after = h.tick();
-    expect(after.energy.loads["water-heater"]).toBeGreaterThan(2000);
-    expect(after.energy.gridW - before.energy.gridW).toBeGreaterThan(2000);
+    expect(after.energy.loads["water-heater"]).toBeGreaterThan(500);
+    expect(after.energy.gridW - before.energy.gridW).toBeGreaterThan(500);
   });
 });
 

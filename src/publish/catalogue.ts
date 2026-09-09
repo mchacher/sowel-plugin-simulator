@@ -209,7 +209,14 @@ function declarationFor(archetype: Archetype, device: DeviceSpec, house: House):
         powerSource: "mains",
       };
     case "shutter":
+    case "pool_cover":
       return {
+        // A pool cover declares exactly what a shutter declares, because the core
+        // resolves a `pool_cover` equipment through the same branch of
+        // `computeBindingCandidates` and aliases `pool_cover_move` and
+        // `shutter_move` to the same `state`. One archetype for the physics, one
+        // declaration for the contract.
+        //
         // A shutter reports only its position; `state` is write-only.
         data: [{ key: "position", type: "number", category: "shutter_position", unit: "%" }],
         orders: [

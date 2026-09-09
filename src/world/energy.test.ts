@@ -12,8 +12,10 @@ import {
 import { sunPosition } from "./sun.js";
 import { inOffPeak, poolPumpScheduled } from "./appliances.js";
 import {
+  boostStorageWh,
   initialWaterHeaterState,
   stepWaterHeater,
+  thermalOutputW,
   WATER_HEATER,
   type WaterHeaterState,
 } from "./water-heater.js";
@@ -96,7 +98,7 @@ describe("the meter", () => {
   });
 });
 
-describe("a flexible load's own programme", () => {
+describe("the thermodynamic tank", () => {
   const run = (
     state: WaterHeaterState,
     inputs: Parameters<typeof stepWaterHeater>[2],
@@ -108,20 +110,45 @@ describe("a flexible load's own programme", () => {
   };
   const idle = { ambientC: 16, drawLitresPerMinute: 0, suppliedByMains: true, solarForced: false };
 
+  it("is a heat pump, not a resistance", () => {
+    // A resistive 2 400 W element would make the arbitration look more dramatic
+    // than it is, and teach a visitor the wrong thing about what this costs.
+    expect(WATER_HEATER.compressorW).toBeLessThan(1000);
+    expect(WATER_HEATER.cop).toBeGreaterThan(2);
+    expect(thermalOutputW(WATER_HEATER)).toBeGreaterThan(WATER_HEATER.compressorW * 2);
+  });
+
   it("knows its off-peak window", () => {
     expect(inOffPeak(23 * 60)).toBe(true);
     expect(inOffPeak(3 * 60)).toBe(true);
     expect(inOffPeak(14 * 60)).toBe(false);
   });
 
-  it("reheats the tank off-peak and leaves it alone the rest of the time", () => {
+  it("reheats to 55 off-peak and is left alone the rest of the time", () => {
     const cold: WaterHeaterState = { temperatureC: 40, heating: false };
     const night = run(cold, { ...idle, offPeak: true }, 240);
-    expect(night.temperatureC).toBeGreaterThan(55);
+    expect(night.temperatureC).toBeGreaterThan(WATER_HEATER.targetC - 2);
+    expect(night.temperatureC).toBeLessThan(WATER_HEATER.targetC + 0.5);
 
     const day = run(cold, { ...idle, offPeak: false }, 240);
     expect(day.heating).toBe(false);
     expect(day.temperatureC).toBeLessThan(cold.temperatureC);
+  });
+
+  it("recovers the morning's showers inside the off-peak window", () => {
+    // Four showers take the tank down by about twenty kelvin; the compressor has
+    // eight hours of night rate to put them back.
+    const showered = run(
+      { temperatureC: WATER_HEATER.targetC, heating: false },
+      { ...idle, offPeak: false, drawLitresPerMinute: 2 },
+      4 * 16,
+    );
+    expect(showered.temperatureC).toBeLessThan(WATER_HEATER.targetC - 15);
+
+    // It settles just under its target rather than on it: standby loss pulls the
+    // tank down between compressor cycles, like every real one.
+    const recovered = run(showered, { ...idle, offPeak: true }, 8 * 60);
+    expect(recovered.temperatureC).toBeGreaterThan(WATER_HEATER.targetC - 2);
   });
 
   it("draws nothing at all when its supply relay is open", () => {
@@ -133,22 +160,44 @@ describe("a flexible load's own programme", () => {
     expect(off.heating).toBe(false);
   });
 
-  it("heats on the solar input whatever the hour — the handle spec 002 gives the arbiter", () => {
+  it("takes the target to 62 on the surplus contact, and stores the difference", () => {
+    // The 230 V contact raises the target rather than switching the tank on —
+    // those seven kelvin are where the surplus goes (core spec 152).
+    const full: WaterHeaterState = { temperatureC: WATER_HEATER.targetC, heating: false };
+    const boosted = run(full, { ...idle, offPeak: false, solarForced: true }, 180);
+    expect(boosted.temperatureC).toBeGreaterThan(WATER_HEATER.targetC + 5);
+    expect(boosted.temperatureC).toBeLessThan(WATER_HEATER.boostTargetC + 0.5);
+
+    // Roughly two kilowatt-hours of heat, which is the whole idea.
+    expect(boostStorageWh(WATER_HEATER)).toBeGreaterThan(1800);
+    expect(boostStorageWh(WATER_HEATER)).toBeLessThan(2300);
+  });
+
+  it("runs at noon on the contact, which the off-peak window alone would forbid", () => {
     const depleted: WaterHeaterState = { temperatureC: 42, heating: false };
-    const forced = run(depleted, { ...idle, offPeak: false, solarForced: true }, 60);
-    expect(forced.heating).toBe(true);
-    expect(forced.temperatureC).toBeGreaterThan(depleted.temperatureC);
+    expect(run(depleted, { ...idle, offPeak: false }, 30).heating).toBe(false);
+    expect(run(depleted, { ...idle, offPeak: false, solarForced: true }, 30).heating).toBe(true);
   });
 
   it("stops at its target rather than heating for ever", () => {
-    const full = run({ temperatureC: 59, heating: true }, { ...idle, offPeak: true }, 600);
+    const full = run(
+      { temperatureC: WATER_HEATER.targetC, heating: false },
+      { ...idle, offPeak: true },
+      600,
+    );
     expect(full.temperatureC).toBeLessThan(WATER_HEATER.targetC + 1);
+    const boosted = run(
+      { temperatureC: WATER_HEATER.boostTargetC, heating: false },
+      { ...idle, offPeak: true, solarForced: true },
+      600,
+    );
+    expect(boosted.temperatureC).toBeLessThan(WATER_HEATER.boostTargetC + 1);
   });
 
   it("is emptied by the morning showers, which is what leaves the day something to do", () => {
     const morning = run(
       initialWaterHeaterState(WATER_HEATER),
-      { ...idle, offPeak: false, drawLitresPerMinute: 2.6 },
+      { ...idle, offPeak: false, drawLitresPerMinute: 2 },
       64,
     );
     expect(morning.temperatureC).toBeLessThan(WATER_HEATER.targetC - WATER_HEATER.hysteresisK);

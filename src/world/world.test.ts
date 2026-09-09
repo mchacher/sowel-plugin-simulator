@@ -92,7 +92,7 @@ describe("what the house looks like", () => {
     // This is what gives the energy arbiter something worth granting: with a
     // daily quota met overnight, a surplus charge would have nothing to do.
     const midday = at("2026-07-15T11:00:00Z");
-    expect(midday.waterHeater.temperatureC).toBeLessThan(58);
+    expect(midday.waterHeater.temperatureC).toBeLessThan(52);
     expect(midday.energy.loads["water-heater"]).toBe(0);
   });
 
@@ -103,8 +103,8 @@ describe("what the house looks like", () => {
     world.actuatorStates.relays["sim-relay-water-heater-solar"] = true;
     const after = world.advance(base + 60_000);
 
-    expect(after.energy.loads["water-heater"]).toBeGreaterThan(2000);
-    expect(after.energy.gridW - before.energy.gridW).toBeGreaterThan(2000);
+    expect(after.energy.loads["water-heater"]).toBeGreaterThan(500);
+    expect(after.energy.gridW - before.energy.gridW).toBeGreaterThan(500);
     expect(after.waterHeater.heating).toBe(true);
   });
 

@@ -85,6 +85,8 @@ const MOTION_HOLD_S = 60;
 const DOOR_OPEN_S = 9;
 /** Days of pool history replayed at start, comfortably past its time constant. */
 const POOL_WARMUP_DAYS = 12;
+/** The pool's cover, which is a thermal input and not only an actuator. */
+const POOL_COVER_DEVICE_ID = "sim-pool-cover";
 
 export interface WorldConfig {
   latitude: number;
@@ -115,7 +117,13 @@ export interface WorldState {
   outdoor: OutdoorState;
   forecast: ForecastDay[];
   rooms: Record<string, RoomState>;
-  pool: { waterTemperatureC: number; setpointC: number; heatPumpOn: boolean };
+  pool: {
+    waterTemperatureC: number;
+    setpointC: number;
+    heatPumpOn: boolean;
+    /** 1 rolled back, 0 closed. Evaporation, and so the whole heat balance, follows it. */
+    coverOpenFraction: number;
+  };
   /** The hot-water tank. Not published as a device: nothing in the demo meters it. */
   waterHeater: WaterHeaterState;
   occupants: OccupantState[];
@@ -254,6 +262,7 @@ export class World {
           solarGainW: poolSolarGainW(this.house.pool, sun, weather.cloudFactor),
           pumpRunning: poolPumpScheduled(localParts(ts, this.config.timezone).minutes),
           setpointC: this.actuators.poolSetpointC,
+          coverOpenFraction: shutterOpenFraction(this.actuators, POOL_COVER_DEVICE_ID),
         },
         stepS,
       );
@@ -594,15 +603,17 @@ export class World {
 
     const poolPumpOn =
       (this.actuators.relays["sim-relay-pool-pump"] ?? true) && poolPumpScheduled(minutes);
+    const coverOpen = shutterOpenFraction(this.actuators, POOL_COVER_DEVICE_ID);
     this.pool = stepPool(
       this.house.pool,
       this.pool,
       {
         outdoorC: outdoor.temperatureC,
         windKmh: weather.windKmh,
-        solarGainW: poolSolarGainW(this.house.pool, sun, weather.cloudFactor),
+        solarGainW: poolSolarGainW(this.house.pool, sun, weather.cloudFactor, coverOpen),
         pumpRunning: poolPumpOn,
         setpointC: this.actuators.poolSetpointC,
+        coverOpenFraction: coverOpen,
       },
       dtS,
     );
@@ -770,6 +781,7 @@ export class World {
         waterTemperatureC: this.pool.waterTemperatureC,
         setpointC: this.actuators.poolSetpointC,
         heatPumpOn: this.pool.heatPumpOn,
+        coverOpenFraction: shutterOpenFraction(this.actuators, POOL_COVER_DEVICE_ID),
       },
       waterHeater: this.waterHeater,
       occupants,

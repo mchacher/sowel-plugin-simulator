@@ -89,6 +89,8 @@ export function loadPowers(inputs: ApplianceInputs): Record<LoadId, number> {
 
   return {
     "heat-pump": inputs.houseHeatingThermalW / Math.max(1, inputs.heatPumpCop),
+    // The compressor's electrical draw. Its thermal output is three times this,
+    // and it goes into the tank, not into the meter.
     "water-heater": inputs.waterHeaterHeating ? nominal("water-heater") : 0,
     "pool-pump": poolPumpOn ? nominal("pool-pump") : 0,
     "pool-heat-pump": inputs.poolHeatPumpOn ? nominal("pool-heat-pump") : 0,

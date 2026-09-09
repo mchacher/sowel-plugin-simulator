@@ -97,6 +97,8 @@ export type Archetype =
   | "relay_4ch"
   | "dimmer"
   | "shutter"
+  /** A pool cover. The same points as a shutter; a different thing to close. */
+  | "pool_cover"
   | "gate"
   | "valve"
   | "thermostat"
