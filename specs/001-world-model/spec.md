@@ -336,3 +336,28 @@ a tidy one, and it gives the demo a recipe worth watching.
 
 Nothing else in the spec changes. The acceptance criteria hold, with AC7d now read
 against a cover whose position the model honours.
+
+### Amendment — 2026-09-09: the pool pump has no timer
+
+FR9 gave the pool pump a built-in timer, by analogy with the water heater's
+off-peak clock. The analogy does not hold, and a real instance said so.
+
+The arbiter's journal read `suspended | Pompe Piscine | wall-switch-on`. Nobody
+touched a switch: a load drawing power the arbiter never granted is, to spec 140,
+indistinguishable from a human overriding it — and the arbiter did the right thing
+and withdrew from that load. "The human always wins" working perfectly against a
+human who did not exist.
+
+A tank's night-rate clock is **inside the appliance**; a pool pump's schedule is
+outside it, and in this house it is literally a Sowel recipe
+(`pool-pump-schedule`). One is physics, the other is automation, and this plugin
+does not do automation.
+
+So the pump runs when its relay is closed and at no other time, and its relay
+starts open. Whoever closes it — the schedule recipe, the arbiter's claimant, a
+visitor — owns the decision. The water heater's supply relay still starts closed,
+because that half of the analogy was right.
+
+The assumption survives in one place, renamed to say so: the pool's twelve-day
+warm-up reconstructs a past the plugin was not there for and has to guess when the
+pump ran. A guess about history is not a schedule.

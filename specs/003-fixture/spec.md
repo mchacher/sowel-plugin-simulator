@@ -1,6 +1,6 @@
 # Spec 003 — The demo house
 
-**Status**: 📝 Draft — the design is derived, three decisions are open
+**Status**: ✅ Implemented — built, restored on a stock Sowel 1.68.0, phase 1 gate walked
 **Phase**: 1 of the [showroom project map](https://github.com/mchacher/sowel-showroom/blob/main/docs/project-map.md) — last of its three specs
 **Builds on**: [001](../001-world-model/) (the world and its devices), [002](../002-orders/) (orders and the `sim.*` orders)
 
@@ -142,20 +142,20 @@ each occupant `sim.enter` / `sim.leave`, and a house-level equipment `sim.ghost`
 
 ## Acceptance criteria
 
-- [ ] AC1 — `python3 scripts/build-demo-fixture.py <showroom-fr.zip>` produces a
+- [x] AC1 — `npx tsx scripts/fixture/build.ts <showroom-fr.zip>` produces a
       backup that restores onto a stock Sowel without error.
-- [ ] AC2 — After restore with the plugin installed, every equipment reports
+- [x] AC2 — After restore with the plugin installed, every equipment reports
       `online` and carries data within a minute.
-- [ ] AC3 — Zero orphaned bindings, recipes, widgets or button bindings.
-- [ ] AC4 — No published key is vendor vocabulary; the catalogue's prohibition
+- [x] AC3 — Zero orphaned bindings, recipes, widgets or button bindings.
+- [x] AC4 — No published key is vendor vocabulary; the catalogue's prohibition
       list is empty across the whole fixture.
-- [ ] AC5 — Ordering a light from the interface changes it; ordering a shutter
+- [x] AC5 — Ordering a light from the interface changes it; ordering a shutter
       makes it travel.
-- [ ] AC6 — `sim.motion` on a living-room sensor fires the motion-light recipe,
+- [x] AC6 — `sim.motion` on a living-room sensor fires the motion-light recipe,
       and the journal says why the lamp came on. **This is the phase 1 gate.**
-- [ ] AC7 — Energy Live shows production, consumption and a signed grid, and the
+- [x] AC7 — Energy Live shows production, consumption and a signed grid, and the
       arbiter has at least two flexible loads to contend over.
-- [ ] AC8 — The script fails loudly on a fixture it cannot fully map.
+- [x] AC8 — The script fails loudly on a fixture it cannot fully map.
 
 ## Decisions, answered 2026-09-09
 
@@ -205,3 +205,73 @@ what the demo should show.
 | A binding whose device row was dropped                       | The binding is dropped with it, and its absence is reported, not silent.                          |
 | A recipe instance left with no equipment                     | The whole instance is dropped and named in the report.                                            |
 | Restoring onto an instance that already has data             | The core's restore replaces everything; that is its contract, not this script's.                  |
+
+---
+
+## Amendments
+
+### 2026-09-09 — TypeScript, not Python
+
+`architecture.md` chose Python, by analogy with the core's own
+`scripts/doc/build-fixtures.py`. Written in TypeScript instead, for one reason that
+outweighs matching the core's choice of language: the builder has to know the
+catalogue — every archetype's keys, categories, bounds and vocabularies — and in
+TypeScript it **imports** it. In Python it would have had a second copy, and a
+second copy of the thing this whole project exists to keep single is the one
+mistake worth avoiding here.
+
+The zip is read by shelling out to `unzip -p`, so no dependency was added.
+
+### 2026-09-09 — the arbiter had to be enrolled, not preserved
+
+The fixture was exported in May; core spec 140 is dated August. Its `equipments`
+table has no `energy_profile` column, so preserving it faithfully meant shipping a
+demo whose arbitration surface was switched off.
+
+Three things were therefore **added**, in the same spirit as the occupants and the
+`sim.*` bindings:
+
+- energy profiles on the three deferrable loads, and the arbiter enabled, with a
+  priority order that puts the water heater first (its stored kelvin are the only
+  surplus still there tomorrow) and the pool pump above the pool heat pump (which
+  is interlocked on it, so granting the heat pump first would buy nothing);
+- the `water-heater-solar` recipe and one instance on the tank, because spec 140
+  is explicit that the arbiter issues no orders — without a claimant the enrolled
+  loads sit idle for ever and the surface lists things that never happen;
+- uniform columns on every table, because the core's restore reads its column list
+  from the first row of each table and silently drops the rest
+  ([#939](https://github.com/mchacher/sowel/issues/939)).
+
+The verifier refuses to emit a fixture missing any of the three.
+
+### 2026-09-09 — what the real instance found
+
+Two defects, neither visible without restoring onto a running Sowel.
+
+**Three profiles restored as three nulls**, for the reason above. The arbiter came
+up `enabled: true, state: active, loads: []` — on, with nothing to arbitrate, and
+nothing anywhere saying why.
+
+**The pool pump looked like a hand on a wall switch.** The arbiter's journal read
+`suspended | Pompe Piscine | wall-switch-on`, and it was right to: the simulator
+was running the pump on an internal schedule, and a load drawing power the arbiter
+never granted is indistinguishable from a human override. The schedule was mine to
+remove — the pump's hours in this house are a Sowel recipe's — and it is gone
+(spec 001's own amendment).
+
+## The phase 1 gate, walked
+
+On a stock Sowel 1.68.0 in Docker: instance wiped, plugin installed, fixture
+restored, recipe packages sideloaded (the container sits behind a TLS-intercepting
+proxy and cannot reach GitHub; the host can).
+
+|                                |                                                                                                                                                                                                                                                                        |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Devices / equipments           | 92 / 86, all `online`, zero bindings without a value                                                                                                                                                                                                                   |
+| Recipe instances               | 21 of 22 started — the twenty-second is disabled in the fixture                                                                                                                                                                                                        |
+| A light ordered                | changes; a shutter ordered travels 100 → 0 over 25 s                                                                                                                                                                                                                   |
+| **`sim.motion` in the cellar** | occupancy true → **the motion-light recipe fires** → the lamp comes on, attributed to `Motion Light` in the journal, and released 105 s later by the recipe's own timeout                                                                                              |
+| **Solar surplus**              | sky forced sunny → surplus climbs −85 → 808 W → arbiter **grants** the tank → the recipe closes the 230 V contact → the compressor draws 600 W → export falls −832 → −235 W while `availableSurplusW` only moves 808 → 696, because the arbiter reserved its own grant |
+
+That last row is the one worth keeping. The reservation accounting spec 140 exists
+for is legible in four numbers, on a house that belongs to nobody.

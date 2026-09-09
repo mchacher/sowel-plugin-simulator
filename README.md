@@ -20,13 +20,21 @@ Given the same clock and the same seed it replays identically. Real time only: n
 
 ## Status
 
-| Spec                          | What                                                     | State       |
-| ----------------------------- | -------------------------------------------------------- | ----------- |
-| [001](specs/001-world-model/) | The world model and the devices it publishes. Read-only. | Implemented |
-| 002                           | Order execution, `sim.*` orders, per-target debounce.    | Next        |
-| 003                           | The fixture remap script.                                | Planned     |
+| Spec                          | What                                                                        | State |
+| ----------------------------- | --------------------------------------------------------------------------- | ----- |
+| [001](specs/001-world-model/) | The world model and the devices it publishes.                               | ✅    |
+| [002](specs/002-orders/)      | Order execution with echo, the `sim.*` orders, ghosts, per-target debounce. | ✅    |
+| [003](specs/003-fixture/)     | The demo fixture, derived from the real house.                              | ✅    |
 
-The three are phase 1 of the [project map](https://github.com/mchacher/sowel-showroom/blob/main/docs/project-map.md).
+The three are phase 1 of the [project map](https://github.com/mchacher/sowel-showroom/blob/main/docs/project-map.md), and it is **done**: on a stock Sowel with this plugin and the built fixture, `sim.motion` in the cellar fires the motion-light recipe and the journal says why the lamp came on, and a forced sunny sky has the energy arbiter grant the water heater its surplus.
+
+## The demo fixture
+
+```bash
+npx tsx scripts/fixture/build.ts ../sowel/docs/fixtures/showroom-fr.zip
+```
+
+Turns the core's anonymised showroom backup into one this plugin drives — 74 equipments in, 73 devices out, the vendor vocabulary dropped, the bindings re-pointed by category, and the `sim.*` orders bound so something can call them. It fails rather than emitting a fixture that half works. `scripts/analyse-fixture.py` reports what a backup holds in simulator terms without writing anything.
 
 ## Development
 
