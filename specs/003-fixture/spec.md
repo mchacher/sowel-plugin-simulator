@@ -30,9 +30,10 @@ Measured, not assumed (`scripts/analyse-fixture.py`):
 | Modes                                      | 3 — Lumière jour / soir / nuit                                    |
 | Dashboard widgets, charts, button bindings | 12 / 2 / 10                                                       |
 
-**Seventy-two of the seventy-four equipments map onto a simulator archetype
-mechanically**, from their type and from the categories their bindings actually
-resolve to. Nothing is guessed:
+**Every one of the seventy-four equipments now maps onto a simulator archetype
+mechanically**, from its type and from the categories its bindings actually resolve
+to — seventy-three onto a device, and the TV onto the decision to drop it. Nothing
+is guessed:
 
 ```
 relay 15 · motion 14 · button 10 · shutter 10 · motion_lux 4 · dimmer 3
@@ -177,20 +178,17 @@ equipment the real house does not have** — a deliberate, recorded departure fr
 and the clearest deferrable load there is. It is the one equipment in the demo house
 that is not in the real one, and it should stay the only one.
 
+**The TV is dropped.** `docs/devices.md` already put media players out of scope —
+cheap to fake, demonstrates nothing about a home-automation engine — and core issue
+[#932](https://github.com/mchacher/sowel/issues/932) says a freshly bound one has no
+power control anyway. The fixture's `media_player` equipment and its device go, and
+the simulator gains no archetype for it.
+
 ## Still open
 
-Two, and neither is mine to take.
+One.
 
-### 1. The TV
-
-`docs/devices.md` puts media players out of scope — cheap to fake, demonstrates
-nothing about a home-automation engine — and core issue
-[#932](https://github.com/mchacher/sowel/issues/932) says a freshly bound one has no
-power control anyway. **Dropped unless someone says otherwise**, which is the
-catalogue's own default. The alternative is to add the archetype and let the demo
-show the bug, which is a defensible thing for a demo to do.
-
-### 2. The recipe timeouts
+### The recipe timeouts
 
 The map's own open question 1. Twenty-one recipe instances carry production
 timeouts — a motion light that holds for ten minutes is right in a house and far

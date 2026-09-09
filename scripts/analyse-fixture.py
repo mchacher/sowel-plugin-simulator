@@ -42,6 +42,7 @@ def archetype_for(equipment_type: str, categories: set[str]) -> str:
         "water_heater": "relay",
         "switch": "relay",
         "pool_pump": "relay",
+        "pool_cover": "pool_cover",
         "pool_heat_pump": "pool_heat_pump",
         "weather": "outdoor_module",
         "weather_forecast": "forecast",
@@ -49,6 +50,10 @@ def archetype_for(equipment_type: str, categories: set[str]) -> str:
         "energy_production_meter": "pv",
         "energy_meter": "subload_clamp",
         "appliance": "metered_appliance",
+        # Dropped by decision, not by oversight: docs/devices.md puts media
+        # players out of scope, and core issue #932 says a freshly bound one has
+        # no power control anyway (spec 003).
+        "media_player": "-dropped-",
     }.get(equipment_type, "?")
 
 
@@ -107,6 +112,8 @@ def main(path: str) -> int:
 
     print()
     print("archetypes:", dict(archetypes.most_common()))
+    if archetypes["-dropped-"]:
+        print(f"{archetypes['-dropped-']} equipment(s) dropped by decision (spec 003)")
     if unmapped:
         print()
         print("NOT MAPPED — each one is a decision, not an oversight:")
