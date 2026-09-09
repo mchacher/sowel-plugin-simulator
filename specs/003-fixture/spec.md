@@ -156,31 +156,41 @@ each occupant `sim.enter` / `sim.leave`, and a house-level equipment `sim.ghost`
       arbiter has at least two flexible loads to contend over.
 - [ ] AC8 — The script fails loudly on a fixture it cannot fully map.
 
-## Open decisions
+## Decisions, answered 2026-09-09
 
-Three, and none of them is mine to take.
+**The pool cover is simulated.** It costs about twenty lines on the contract side —
+a `pool_cover` equipment resolves through the same branch of
+`computeBindingCandidates` as a shutter, and the core aliases `pool_cover_move` to
+the same `state`, so the archetype declares exactly what a shutter declares. The
+work that mattered was the physics: a closed cover cuts the pool's evaporation to
+15 % and more than halves its overnight loss. Done in the
+[spec 001 amendment](../001-world-model/spec.md).
 
-### 1. The two equipments that do not map
+**The demo house gains a water heater**, and it is a thermodynamic tank modelled on
+the maintainer's own: 600 W drawn for 1 800 W of heat, target 55 °C, and a separate
+230 V surplus contact that takes the target to 62 °C rather than switching the tank
+on. Also done in that amendment.
 
-| Equipment                        | Situation                                                                                                                                                                                                                                  | Options                                                                                             |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| **Volet Piscine** (`pool_cover`) | It has no bindings at all in the fixture — an equipment with nothing behind it.                                                                                                                                                            | Give the simulator a `pool_cover` archetype (a second shutter, essentially), or drop the equipment. |
-| **TV** (`media_player`)          | `docs/devices.md` puts media players out of scope: cheap to fake, demonstrates nothing about a home-automation engine. Core issue [#932](https://github.com/mchacher/sowel/issues/932) also says a freshly bound one has no power control. | Drop it, or add the archetype and let the demo show the bug.                                        |
+That one has a consequence for this spec. **The fixture must gain a `water_heater`
+equipment the real house does not have** — a deliberate, recorded departure from
+"the shape of the real home", taken so the demo can show the spec 152 solar channel
+and the clearest deferrable load there is. It is the one equipment in the demo house
+that is not in the real one, and it should stay the only one.
 
-### 2. There is no water heater in the fixture
+## Still open
 
-The arbitration story in spec 001 (FR9b) is built on a water heater: 2 400 W,
-deferrable, with the separate solar input core spec 152 models. **The real house
-has no water heater equipment**, so the fixture has none either.
+Two, and neither is mine to take.
 
-Without one, the arbiter has the pool pump and the pool heat pump to contend over,
-which works but loses the clearest case — and loses the spec 152 solar channel
-entirely, since that only exists on `water_heater` and `switch`.
+### 1. The TV
 
-Options: add a water heater to the demo house (a small, deliberate departure from
-"the shape of the real home"), or accept a thinner arbitration story.
+`docs/devices.md` puts media players out of scope — cheap to fake, demonstrates
+nothing about a home-automation engine — and core issue
+[#932](https://github.com/mchacher/sowel/issues/932) says a freshly bound one has no
+power control anyway. **Dropped unless someone says otherwise**, which is the
+catalogue's own default. The alternative is to add the archetype and let the demo
+show the bug, which is a defensible thing for a demo to do.
 
-### 3. The recipe timeouts
+### 2. The recipe timeouts
 
 The map's own open question 1. Twenty-one recipe instances carry production
 timeouts — a motion light that holds for ten minutes is right in a house and far
