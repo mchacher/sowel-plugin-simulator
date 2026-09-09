@@ -90,6 +90,56 @@ describe("the pool", () => {
     expect(poolEvaporationW(POOL, 12, 26, 5)).toBe(0);
   });
 
+  it("loses far less overnight with the cover closed", () => {
+    // Evaporation is the dominant loss of an outdoor pool, and a cover is a lid.
+    // This is what makes closing it at dusk an energy decision, not a tidy one.
+    const night = { outdoorC: 13, windKmh: 14, solarGainW: 0, pumpRunning: false, setpointC: 27 };
+    const start: PoolState = { waterTemperatureC: 26, heatPumpOn: false };
+    const uncovered = run(start, { ...night, coverOpenFraction: 1 }, 10 * 60);
+    const covered = run(start, { ...night, coverOpenFraction: 0 }, 10 * 60);
+
+    const lostOpen = 26 - uncovered.waterTemperatureC;
+    const lostClosed = 26 - covered.waterTemperatureC;
+    expect(lostOpen).toBeGreaterThan(0);
+    expect(lostClosed).toBeGreaterThan(0);
+    expect(lostClosed).toBeLessThan(lostOpen * 0.5);
+  });
+
+  it("still lets the sun through a closed cover, attenuated", () => {
+    const noon = sunPosition(Date.parse("2026-07-01T11:52:00Z"), PARIS.lat, PARIS.lon, PARIS.tz);
+    const open = poolSolarGainW(POOL, noon, 0.95, 1);
+    const closed = poolSolarGainW(POOL, noon, 0.95, 0);
+    // A translucent cover is a greenhouse: less gain, not none, which is why a
+    // covered pool in July warms rather than stalling.
+    expect(closed).toBeGreaterThan(0);
+    expect(closed).toBeLessThan(open);
+    expect(closed).toBeGreaterThan(open * 0.25);
+  });
+
+  it("shelters the surface from the wind as well as from the air", () => {
+    const windy = poolEvaporationW(POOL, 26, 16, 40, 1);
+    const still = poolEvaporationW(POOL, 26, 16, 0, 1);
+    expect(windy).toBeGreaterThan(still);
+    // Closed, the wind barely matters any more.
+    const coveredWindy = poolEvaporationW(POOL, 26, 16, 40, 0);
+    const coveredStill = poolEvaporationW(POOL, 26, 16, 0, 0);
+    expect(coveredWindy - coveredStill).toBeLessThan((windy - still) * 0.3);
+  });
+
+  it("warms over a covered summer week instead of standing still", () => {
+    const summer = {
+      outdoorC: 24,
+      windKmh: 10,
+      solarGainW: 3500,
+      pumpRunning: false,
+      setpointC: 27,
+    };
+    const start: PoolState = { waterTemperatureC: 22, heatPumpOn: false };
+    const uncovered = run(start, { ...summer, coverOpenFraction: 1 }, 7 * 8 * 60);
+    const covered = run(start, { ...summer, coverOpenFraction: 0 }, 7 * 8 * 60);
+    expect(covered.waterTemperatureC).toBeGreaterThan(uncovered.waterTemperatureC);
+  });
+
   it("holds around the setpoint rather than boiling past it", () => {
     let state: PoolState = { waterTemperatureC: 27, heatPumpOn: false };
     for (let day = 0; day < 5 * 24 * 60; day++) {

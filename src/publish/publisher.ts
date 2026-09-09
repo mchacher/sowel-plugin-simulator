@@ -288,6 +288,7 @@ export class Publisher {
         return dimmer && { state: dimmer.on, brightness: Math.round(dimmer.brightness) };
       }
       case "shutter":
+      case "pool_cover":
         return { position: this.round(state.actuators.shutters[device.id] ?? 100, 0) };
       case "gate":
         return { R1: state.actuators.gates[device.id] ?? false };

@@ -284,3 +284,55 @@ continues; a tick that overruns is skipped, never queued.
 | A device the catalogue does not define                   | Refused at declaration by the catalogue assertion, not published.                                                                                                           |
 | An overcast winter week                                  | Export may never occur. The arbiter correctly grants nothing; the demo is dull but not wrong. The seed and the fallback location are chosen so this is not the common case. |
 | The pool heat pump and the pool pump both drawing        | Both appear on their own clamps and both in the grid. The arbiter's job is exactly to order them; the simulator never arbitrates on its behalf.                             |
+
+---
+
+## Amendment — 2026-09-09: the pool cover and the thermodynamic tank
+
+Two of the physical models were built from a reading of the reference fixture.
+The maintainer corrected them against the installation they describe. Both
+corrections make the demo less dramatic and more true, which is the trade this
+project is supposed to make.
+
+### The water heater is a heat pump, not a resistance
+
+FR9b sized it at 2 400 W on the assumption of a resistive element. It is a
+**thermodynamic tank**: roughly 600 W drawn for 1 800 W of heat.
+
+And its surplus input does not switch it on — it **raises its target**, from 55 °C
+to 62 °C. Those seven kelvin are the storage: about 2 kWh of heat for 0.7 kWh
+drawn, reached in some ninety minutes of surplus. The separate 230 V contact that
+does it is exactly the dry contact core spec 152 models, and exactly the second
+relay the plugin already publishes.
+
+This shrinks the arbiter's largest deferrable load from 2 400 W to 600 W, so
+**AC7c is re-read rather than failed**: the surplus has to exceed the largest
+flexible load, and at 6 kWc it exceeds all of them together. The contest the
+arbiter arbitrates is now the pool heat pump (1 500 W), the pool pump (750 W) and
+the tank (600 W) — 2 850 W against a midday surplus above 4 kW. Still a contest,
+and a truer one.
+
+### The pool has a cover, and a cover is a thermal input
+
+FR9c gave the pool water, a heat pump and a pump. It is missing the thing that
+dominates its heat balance: **evaporation**, and the cover that stops it.
+
+A new `pool_cover` archetype declares exactly what a shutter declares — the core
+resolves a `pool_cover` equipment through the same branch of
+`computeBindingCandidates` and aliases `pool_cover_move` to the same `state`, so
+there is nothing to add on the contract side. It is a separate archetype only
+because it is a separate thing in the model:
+
+| Closed cover | Effect                                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------------------------ |
+| Evaporation  | Down to 15 %, and the surface is sheltered from the wind as well as the air                                        |
+| Convection   | Down to 60 % — the cover itself still radiates                                                                     |
+| Solar gain   | Down to 45 % — a translucent cover is a greenhouse, which is why a covered pool in July warms rather than stalling |
+
+Measured: a ten-hour night at 13 °C with a 14 km/h wind costs the water **2.1 K
+uncovered and 0.9 K covered**, as evaporation falls from about 5 000 W to under
+600 W. That is what makes closing the cover at dusk an energy decision rather than
+a tidy one, and it gives the demo a recipe worth watching.
+
+Nothing else in the spec changes. The acceptance criteria hold, with AC7d now read
+against a cover whose position the model honours.

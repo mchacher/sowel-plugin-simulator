@@ -71,6 +71,10 @@ export function initialActuators(house: House): ActuatorStates {
       case "shutter":
         state.shutters[device.id] = 100;
         break;
+      case "pool_cover":
+        // Rolled back, like the shutters. Closing it is a recipe's decision.
+        state.shutters[device.id] = 100;
+        break;
       case "thermostat": {
         const room = house.rooms.find((r) => r.id === device.room);
         state.thermostats[device.id] = {

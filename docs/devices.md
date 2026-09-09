@@ -63,6 +63,7 @@ are `single`, `double`, `hold`.
 | Multi-channel relay | `power1` … `power4` → `light_state`, boolean                              | same keys → `light_toggle`                                                                                    |
 | Dimmable light      | `state` → `light_state`; `brightness` → `light_brightness`, number, 0–254 | `state` → `light_toggle`; `brightness` → `set_brightness`, min 0, max 254                                     |
 | Shutter             | `position` → `shutter_position`, number, `%`, 0–100                       | `position` → `set_shutter_position`, min 0, max 100; `state` → `shutter_move`, enum `["OPEN","CLOSE","STOP"]` |
+| Pool cover          | the same points as a shutter                                              | the same orders                                                                                               |
 | Gate                | `R1` → `gate_state`, boolean                                              | `R1` → `gate_trigger`                                                                                         |
 | Water valve         | `state` → `light_state`, boolean                                          | `state` → `light_toggle`                                                                                      |
 
@@ -80,6 +81,16 @@ power. Publish 0 to 254 until #933 is fixed, then revisit.
 
 A shutter reports **only its position**; `state` is write-only. Position 0 is closed
 and 100 is open, and the value must travel over a few seconds rather than jump.
+
+**A pool cover declares exactly what a shutter declares.** The core resolves a
+`pool_cover` equipment through the same branch of `computeBindingCandidates` as a
+shutter, and aliases `pool_cover_move` and `shutter_move` to the same `state`, so
+there is nothing to add on the contract side. It is a separate archetype only
+because it is a separate thing in the physics: **a closed cover stops most of the
+pool's evaporation**, which is the dominant loss of an outdoor bassin. Measured in
+the model, a ten-hour night at 13 °C with a 14 km/h wind costs the water 2.1 K
+uncovered and 0.9 K covered — evaporation falls from about 5 000 W to under 600 W.
+That is what makes closing it at dusk an energy decision rather than a tidy one.
 
 ### Climate
 
@@ -131,6 +142,19 @@ On a grid clamp, `power` is signed: negative means export.
 (`idle`, `running`, `pause`, `finished`) but the core charts the category as binary and
 clips the rest (core issue #936). The simulator declares `["on","off"]` — the richer
 vocabulary is worth having only once the chart supports it.
+
+**The water heater is a thermodynamic tank, and that changes its numbers.** It is a
+heat pump: about 600 W drawn for 1 800 W of heat, not a 2 400 W resistance. A
+resistive element would make the arbitration look more dramatic than it is and
+teach a visitor the wrong thing about what such a tank costs to run.
+
+Its surplus input **raises the target rather than switching it on**: the separate
+230 V contact takes it from 55 °C to 62 °C, and those seven kelvin are where the
+surplus goes — about 2 kWh of heat stored for 0.7 kWh drawn, reached in roughly
+ninety minutes. That is the whole idea of a solar water heater, and it is why the
+tank is the clearest deferrable load in the house. Four showers take it down to
+about 38 °C, after the off-peak window has closed, which is what leaves the sunny
+part of the day something worth doing.
 
 **A flexible load is a relay _and_ a clamp.** The energy arbiter (core spec 140)
 reserves a granted load's measured draw when a `power` binding exists, and falls back to

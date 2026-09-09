@@ -154,6 +154,7 @@ export class OrderRouter {
           world.setDimmerBrightness(device.id, brightness),
         );
       case "shutter":
+      case "pool_cover":
         if (orderKey === "state") {
           const move = coerceEnum(value, ["OPEN", "CLOSE", "STOP"]);
           if (!move) return this.warnValue(device, orderKey, value);
