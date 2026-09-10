@@ -22,9 +22,22 @@ import type { ActuatorStates } from "./actuators.js";
 const OFF_PEAK_START = 22 * 60 + 30;
 const OFF_PEAK_END = 6 * 60 + 30;
 
-/** The pool pump's built-in timer. */
-const POOL_PUMP_START = 11 * 60;
-const POOL_PUMP_END = 15 * 60;
+/**
+ * When the pool pump is **assumed** to have run, for reconstructing the pool's
+ * past at start-up (spec 001, FR3). It is not a timer the plugin obeys.
+ *
+ * The pump has no built-in schedule here, unlike the water heater's off-peak
+ * clock: in this house its hours are a Sowel recipe's (`pool-pump-schedule`), and
+ * a simulator that scheduled it too would be doing automation. It would also
+ * break the arbiter — a load running without a grant looks to spec 140 exactly
+ * like a hand on a wall switch, and the arbiter correctly suspends itself on that
+ * load. It did, on a real instance, with the reason `wall-switch-on`.
+ *
+ * The pool's twelve-day warm-up still needs to guess what happened before the
+ * plugin existed, and this is that guess.
+ */
+const ASSUMED_PUMP_START = 11 * 60;
+const ASSUMED_PUMP_END = 15 * 60;
 
 export interface ApplianceCycle {
   running: boolean;
@@ -67,8 +80,8 @@ export function inOffPeak(minutes: number): boolean {
   return minutes >= OFF_PEAK_START || minutes < OFF_PEAK_END;
 }
 
-export function poolPumpScheduled(minutes: number): boolean {
-  return minutes >= POOL_PUMP_START && minutes < POOL_PUMP_END;
+export function poolPumpAssumedRunning(minutes: number): boolean {
+  return minutes >= ASSUMED_PUMP_START && minutes < ASSUMED_PUMP_END;
 }
 
 export function loadPowers(inputs: ApplianceInputs): Record<LoadId, number> {
@@ -76,10 +89,9 @@ export function loadPowers(inputs: ApplianceInputs): Record<LoadId, number> {
   const nominal = (id: LoadId): number =>
     inputs.house.loads.find((l) => l.id === id)?.nominalW ?? 0;
 
-  const poolPumpRelay = inputs.actuators.relays["sim-relay-pool-pump"];
-
-  // The pool pump runs on its timer unless something has switched its relay off.
-  const poolPumpOn = (poolPumpRelay ?? true) && poolPumpScheduled(minutes);
+  // The pump runs when its relay is closed, and nothing else. Whoever closed it —
+  // a recipe on a schedule, the arbiter's claimant, a visitor — owns the decision.
+  const poolPumpOn = inputs.actuators.relays["sim-relay-pool-pump"] ?? false;
 
   const dishwasher = cycleAt(minutes, 20 * 60 + 30, 95, nominal("dishwasher"));
   const laundry =

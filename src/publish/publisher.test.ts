@@ -91,7 +91,7 @@ describe("what goes on the wire", () => {
     publisher.publish(world.advance(NOON + 6 * 60_000));
     const republished = updates.slice(afterFirst).map((u) => u.id);
     expect(republished.length).toBeGreaterThan(0);
-    expect(republished).toContain("sim-th-sejour");
+    expect(republished).toContain("sim-th-probe-bureau-1");
   });
 
   it("carries the grid clamp as soon as it moves, which is what the arbiter reads", () => {
@@ -113,7 +113,7 @@ describe("what goes on the wire", () => {
     // `valuesFor` is the only producer, so reach the gate the way a bug would.
     const before = updates.length;
     (publisher as unknown as { gate: (...args: unknown[]) => Record<string, unknown> }).gate(
-      "sim-th-sejour",
+      "sim-th-probe-bureau-1",
       { linkquality: 42, nanoe: true, temperature: 21 },
       NOON + 600_000,
       false,

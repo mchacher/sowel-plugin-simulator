@@ -8,7 +8,7 @@
  * thermostat card. **The category is the contract.**
  */
 
-import type { Archetype, DeviceSpec, House } from "../house/types.js";
+import type { Archetype, DeviceSpec } from "../house/types.js";
 import type { DiscoveredDevice } from "../sowel-api.js";
 
 /**
@@ -94,7 +94,11 @@ const SIM_TRIGGER = { type: "boolean" } as const;
 
 type Declaration = Omit<DiscoveredDevice, "friendlyName">;
 
-function declarationFor(archetype: Archetype, device: DeviceSpec, house: House): Declaration {
+function declarationFor(
+  archetype: Archetype,
+  device: DeviceSpec,
+  roomIds: readonly string[],
+): Declaration {
   switch (archetype) {
     case "motion":
       return {
@@ -238,9 +242,10 @@ function declarationFor(archetype: Archetype, device: DeviceSpec, house: House):
       };
     case "valve":
       return {
-        data: [{ key: "state", type: "boolean", category: "light_state" }],
+        data: [{ key: "state", type: "boolean", category: "light_state" }, battery],
         orders: [{ key: "state", type: "boolean", category: "light_toggle" }],
-        powerSource: "mains",
+        // An irrigation valve in a garden has no mains next to it.
+        powerSource: "battery",
       };
     case "thermostat":
       return {
@@ -308,6 +313,9 @@ function declarationFor(archetype: Archetype, device: DeviceSpec, house: House):
             unit: "°C",
           },
           { key: "setpoint", type: "number", category: "pool_temperature_setpoint", unit: "°C" },
+          // Whether the unit is actually running. The model knows; the card shows
+          // it; and without it the fixture's own state binding has nowhere to go.
+          { key: "state", type: "boolean", category: "light_state" },
         ],
         orders: [
           {
@@ -337,11 +345,23 @@ function declarationFor(archetype: Archetype, device: DeviceSpec, house: House):
         powerSource: "mains",
       };
     case "subload_clamp":
+      return {
+        data: [
+          { key: "power", type: "number", category: "power", unit: "W" },
+          { key: "energy", type: "number", category: "energy", unit: "Wh" },
+        ],
+        orders: [],
+        powerSource: "mains",
+      };
     case "pv":
       return {
         data: [
           { key: "power", type: "number", category: "power", unit: "W" },
           { key: "energy", type: "number", category: "energy", unit: "Wh" },
+          // The production total. A clamp on an inverter measures both
+          // directions, but an inverter only ever produces, so there is no
+          // `energy_reverse` here and a binding for one is correctly dropped.
+          { key: "energy_forward", type: "number", category: "energy", unit: "Wh" },
         ],
         orders: [],
         powerSource: "mains",
@@ -430,7 +450,7 @@ function declarationFor(archetype: Archetype, device: DeviceSpec, house: House):
             key: "zone",
             type: "enum",
             category: "generic",
-            enumValues: [...house.rooms.map((r) => r.id), "away"],
+            enumValues: [...roomIds, "away"],
           },
           { key: "present", type: "boolean", category: "generic" },
         ],
@@ -452,9 +472,15 @@ function declarationFor(archetype: Archetype, device: DeviceSpec, house: House):
   }
 }
 
-/** The full discovery declaration for one device of the house. */
-export function declare(device: DeviceSpec, house: House): DiscoveredDevice {
-  const declaration = declarationFor(device.archetype, device, house);
+/**
+ * The full discovery declaration for one device of the house.
+ *
+ * It takes the room ids rather than the whole house so that the generator can
+ * call it before the device list exists — which is the one thing it must be able
+ * to do, since it is the device list it produces.
+ */
+export function declare(device: DeviceSpec, roomIds: readonly string[]): DiscoveredDevice {
+  const declaration = declarationFor(device.archetype, device, roomIds);
   return {
     friendlyName: device.id,
     manufacturer: "Sowel",
@@ -464,7 +490,7 @@ export function declare(device: DeviceSpec, house: House): DiscoveredDevice {
 }
 
 /** Every key an archetype declares, data and orders. */
-export function declaredKeys(device: DeviceSpec, house: House): string[] {
-  const declaration = declare(device, house);
+export function declaredKeys(device: DeviceSpec, roomIds: readonly string[]): string[] {
+  const declaration = declare(device, roomIds);
   return [...declaration.data.map((d) => d.key), ...declaration.orders.map((o) => o.key)];
 }

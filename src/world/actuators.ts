@@ -60,7 +60,13 @@ export function initialActuators(house: House): ActuatorStates {
         // off-peak, a pool pump on its built-in timer. The water heater's *solar*
         // input starts open: nothing is forcing a surplus charge yet, and that is
         // the handle spec 002 hands the arbiter. Lights start off.
-        state.relays[device.id] = device.load !== undefined && !device.solarChannel;
+        // A water heater is genuinely on permanent mains, with its own clock
+        // inside: its supply relay is closed. A pool pump is not — its hours are
+        // a Sowel recipe's, so its relay starts open and waits to be told. A
+        // simulator that scheduled it would be doing automation, and a load
+        // running without a grant looks to the energy arbiter like a hand on a
+        // wall switch.
+        state.relays[device.id] = device.load === "water-heater" && !device.solarChannel;
         break;
       case "relay_4ch":
         state.relayChannels[device.id] = new Array(device.channels ?? 4).fill(false);

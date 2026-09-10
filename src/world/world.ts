@@ -22,7 +22,7 @@ import {
   type ActuatorStates,
 } from "./actuators.js";
 import { initialAir, daylightLux, stepAir, type AirState } from "./air.js";
-import { applianceRunning, inOffPeak, loadPowers, poolPumpScheduled } from "./appliances.js";
+import { applianceRunning, inOffPeak, loadPowers, poolPumpAssumedRunning } from "./appliances.js";
 import { dayNumber, localMidnight, localParts } from "./clock.js";
 import {
   accumulate,
@@ -57,7 +57,7 @@ import {
   stepRoom,
   type RoomThermalState,
 } from "./thermal.js";
-import { outdoorAt, outdoorRangeForDay, type OutdoorState } from "./outdoor.js";
+import { groundTemperatureC, outdoorAt, outdoorRangeForDay, type OutdoorState } from "./outdoor.js";
 import { ORIENTATION_AZIMUTH } from "../house/types.js";
 import {
   forecast,
@@ -143,6 +143,10 @@ export interface WorldState {
   appliancesRunning: Record<string, boolean>;
   /** Ephemeral visitors currently in the house (spec 002, FR4). */
   ghostCount: number;
+  /** What the house's own heat pump measures: the mean of the rooms it serves. */
+  houseTemperatureC: number;
+  /** Whether any room the house heat pump serves is calling for heat. */
+  houseHeatingOn: boolean;
 }
 
 export class World {
@@ -167,8 +171,6 @@ export class World {
   private readonly overrides = new Overrides();
   private readonly gatePulseUntil = new Map<string, number>();
   private readonly roomIds: ReadonlySet<string>;
-  /** Room id → the motion sensor in it, so a pulse can be addressed by device. */
-  private readonly motionSensors = new Map<string, string>();
 
   constructor(
     private readonly config: WorldConfig,
@@ -183,11 +185,6 @@ export class World {
       }
     }
     this.roomIds = new Set(house.rooms.map((room) => room.id));
-    for (const device of house.devices) {
-      if (device.room && (device.archetype === "motion" || device.archetype === "motion_lux")) {
-        this.motionSensors.set(device.room, device.id);
-      }
-    }
   }
 
   /** The actuator states, which spec 002 will mutate from orders. */
@@ -260,7 +257,9 @@ export class World {
           outdoorC: outdoor.temperatureC,
           windKmh: weather.windKmh,
           solarGainW: poolSolarGainW(this.house.pool, sun, weather.cloudFactor),
-          pumpRunning: poolPumpScheduled(localParts(ts, this.config.timezone).minutes),
+          // The warm-up reconstructs a past the plugin was not there for, so the
+          // pump's hours are an assumption here and only here.
+          pumpRunning: poolPumpAssumedRunning(localParts(ts, this.config.timezone).minutes),
           setpointC: this.actuators.poolSetpointC,
           coverOpenFraction: shutterOpenFraction(this.actuators, POOL_COVER_DEVICE_ID),
         },
@@ -453,7 +452,8 @@ export class World {
   // ── Simulation orders (spec 002, FR3) ──────────────────────────────────────
 
   simMotion(deviceId: string, now: number): void {
-    this.overrides.pulseMotion(deviceId, now);
+    const room = this.house.devices.find((device) => device.id === deviceId)?.room;
+    if (room) this.overrides.pulseMotion(room, now);
   }
 
   simDoor(deviceId: string, open: boolean, now: number): void {
@@ -510,7 +510,14 @@ export class World {
     return sunPosition(ts, this.config.latitude, this.config.longitude, this.config.timezone);
   }
 
-  /** Setpoint and enablement a room's heating is running with. */
+  /**
+   * Setpoint and enablement a room's heating is running with.
+   *
+   * A `trv` room has no thermostat of its own: it follows the house's heat pump,
+   * offset by the amount its valve is turned down. Turn the house unit off and
+   * every valve in the house goes with it, which is what happens in a house with
+   * one air-to-water unit and is the behaviour a recipe acting on the PAC needs.
+   */
   private heatingFor(room: Room): { setpointC: number; enabled: boolean } {
     const device = this.heatingDevices.get(room.id);
     if (device?.archetype === "thermostat") {
@@ -520,7 +527,36 @@ export class World {
     if (device?.archetype === "heater") {
       return { setpointC: room.setpointC, enabled: this.actuators.heaters[device.id] ?? true };
     }
-    return { setpointC: room.setpointC, enabled: room.heating === "trv" };
+    if (room.heating === "trv") {
+      const house = this.actuators.thermostats[this.house.houseThermostatDeviceId];
+      const setpointC = house ? house.setpointC - (room.setpointOffsetK ?? 0) : room.setpointC;
+      return { setpointC, enabled: house?.power ?? true };
+    }
+    return { setpointC: room.setpointC, enabled: false };
+  }
+
+  /**
+   * What the house's own heat pump measures: the area-weighted mean of the rooms
+   * it serves. A unit serving the whole house has no single room to read, and an
+   * average is both what it behaves like and what the zone aggregator should see.
+   */
+  private houseTemperatureC(): number {
+    let weighted = 0;
+    let area = 0;
+    for (const room of this.house.rooms) {
+      if (room.heating !== "trv") continue;
+      const thermal = this.rooms.get(room.id);
+      if (!thermal) continue;
+      weighted += thermal.temperatureC * room.floorAreaM2;
+      area += room.floorAreaM2;
+    }
+    return area > 0 ? weighted / area : 20;
+  }
+
+  /** The temperature a thermostat device reports about itself. */
+  houseOrRoomTemperatureC(deviceId: string, roomId: string | undefined): number {
+    if (deviceId === this.house.houseThermostatDeviceId) return this.houseTemperatureC();
+    return this.rooms.get(roomId ?? "")?.temperatureC ?? this.houseTemperatureC();
   }
 
   /** Beam landing on a room's glazing, W — daylight as well as heat. */
@@ -567,7 +603,7 @@ export class World {
         room,
         thermal,
         {
-          outdoorC: outdoor.temperatureC,
+          outdoorC: room.groundCoupled ? groundTemperatureC(ts, timezone) : outdoor.temperatureC,
           solarGainW: solarGainW(room, sun, weather.cloudFactor, (id) =>
             shutterOpenFraction(this.actuators, id),
           ),
@@ -601,8 +637,9 @@ export class World {
       );
     }
 
-    const poolPumpOn =
-      (this.actuators.relays["sim-relay-pool-pump"] ?? true) && poolPumpScheduled(minutes);
+    // Its relay and nothing else. A recipe schedules it, the arbiter's claimant may
+    // ask for it, a visitor can switch it — the simulator only reports the water.
+    const poolPumpOn = this.actuators.relays["sim-relay-pool-pump"] ?? false;
     const coverOpen = shutterOpenFraction(this.actuators, POOL_COVER_DEVICE_ID);
     this.pool = stepPool(
       this.house.pool,
@@ -715,8 +752,7 @@ export class World {
       if (!thermal || !air) continue;
       const here = byRoom.get(room.id) ?? 0;
       const lastSeen = this.lastOccupiedAt.get(room.id) ?? -Infinity;
-      const sensor = this.motionSensors.get(room.id);
-      const pulsed = sensor !== undefined && this.overrides.motionForced(sensor, now);
+      const pulsed = this.overrides.motionForced(room.id, now);
       rooms[room.id] = {
         id: room.id,
         temperatureC: thermal.temperatureC,
@@ -798,6 +834,10 @@ export class World {
       actuators: this.actuators,
       appliancesRunning,
       ghostCount: this.ghosts.count(now),
+      houseTemperatureC: this.houseTemperatureC(),
+      houseHeatingOn: this.house.rooms.some(
+        (room) => room.heating === "trv" && (this.rooms.get(room.id)?.heatingOn ?? false),
+      ),
     };
   }
 }

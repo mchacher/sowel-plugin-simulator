@@ -91,6 +91,26 @@ export function outdoorAt(
   };
 }
 
+/**
+ * Soil temperature a couple of metres down, which is what a cellar loses heat to.
+ *
+ * The ground is a low-pass filter on the year: it keeps the annual mean, holds a
+ * quarter of the swing, and runs about two months behind the air. That is why a
+ * cellar sits near 12 °C in both January and July, and why coupling one to the
+ * outdoor air — as this model did at first — gave a cellar at 3 °C in winter,
+ * which no cellar has ever been.
+ */
+export function groundTemperatureC(
+  ts: number,
+  tz: string,
+  climate: ClimateProfile = TEMPERATE_OCEANIC,
+): number {
+  const { dayOfYear } = localParts(ts, tz);
+  const lagDays = 60;
+  const phase = ((dayOfYear - climate.warmestDayOfYear - lagDays) / 365) * 2 * Math.PI;
+  return climate.annualMeanC + climate.annualAmplitudeC * 0.25 * Math.cos(phase);
+}
+
 /** The day's minimum and maximum, for the forecast. */
 export function outdoorRangeForDay(
   ts: number,

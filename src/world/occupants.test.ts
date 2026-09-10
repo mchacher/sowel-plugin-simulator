@@ -83,7 +83,7 @@ describe("the household", () => {
   it("counts people per room", () => {
     const counts = occupancyByRoom(at(MONDAY, 3 * 60));
     expect(counts.get("chambre-parents")).toBe(2);
-    expect(counts.get("chambre-1")).toBe(1);
+    expect(counts.get("chambre-enfant-1")).toBe(1);
     expect(counts.get(AWAY)).toBeUndefined();
   });
 
