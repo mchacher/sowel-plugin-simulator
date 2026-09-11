@@ -4,6 +4,20 @@ All notable changes to this plugin. Versions follow semver; the registry in `mch
 
 ## Unreleased
 
+## v0.3.0
+
+**A pavilion, not a tower.** The demo house is now a ground floor and one storey
+with the garage attached at the side — fourteen rooms instead of sixteen, and the
+cellar and the workshop are gone with their six devices. The real house has four
+levels; drawn in three dimensions that is a tower nobody can read, and the 3D view
+(`sowel-house-3d`) is the drawing of _this_ house. `scripts/fixture/reshape.ts`
+does it to the backup before anything is derived: two zones dropped with
+everything in them, two level zones folded into the one above, the stairwell
+filed under the ground floor. Areas and window orientations in `layout.ts` are
+the plan's, so the physics runs on the rooms a visitor sees.
+
+The device ids of every remaining room are unchanged, and so are the bindings.
+
 ## v0.2.0
 
 The first version that simulates anything. Phase 1 of the

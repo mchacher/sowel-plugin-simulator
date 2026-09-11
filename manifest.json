@@ -2,7 +2,7 @@
   "id": "simulator",
   "type": "integration",
   "name": "Simulator",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A simulated home: occupants on an agenda, sun, weather, thermal, a pool, PV and loads, published as ordinary devices",
   "icon": "House",
   "repo": "mchacher/sowel-plugin-simulator",
