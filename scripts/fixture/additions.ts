@@ -77,6 +77,15 @@ export const NEW_EQUIPMENTS: NewEquipment[] = [
   },
   { name: "Simulation", type: "switch", deviceIds: ["sim-house"] },
   {
+    // Adopted: the fixture's gate has a motor relay and nothing that says where
+    // the gate is. The contact is a *new* reading on an existing equipment, which
+    // is what adoption is for — attaching by name only re-points bindings the
+    // fixture already had, and it had none for this.
+    name: "Portail",
+    type: "gate",
+    deviceIds: ["sim-contact-portail"],
+  },
+  {
     // The fixture has this equipment and **no bindings at all** behind it — a
     // pool cover nobody ever wired up. It is adopted rather than recreated, so
     // the zone tree and anything referring to it stay as they are.

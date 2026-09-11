@@ -33,6 +33,7 @@ export const GENERATED_DEVICES: DeviceSpec[] = [
   { id: "sim-clamp-water-heater", archetype: "subload_clamp", load: "water-heater" },
   { id: "sim-contact-entree", archetype: "contact", room: "entree" },
   { id: "sim-contact-garage", archetype: "contact", room: "garage" },
+  { id: "sim-contact-portail", archetype: "contact", room: "jardin" },
   { id: "sim-contact-sejour", archetype: "contact", room: "sejour" },
   { id: "sim-dimmer-cuisine-1", archetype: "dimmer", room: "cuisine" },
   { id: "sim-dimmer-sejour-1", archetype: "dimmer", room: "sejour" },
