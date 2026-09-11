@@ -261,7 +261,7 @@ const occupants: Occupant[] = [
 
 /**
  * Sizing is not decoration (spec 001, FR9b). An arbiter with no surplus, or with
- * a surplus smaller than its smallest load, demonstrates nothing: 6 kWc against a
+ * a surplus smaller than its smallest load, demonstrates nothing: 4 kWc against a
  * 2 400 W water heater and a 750 W pool pump is a real contest at midday, which is
  * the exact scenario core spec 140 was written for.
  */
@@ -307,6 +307,7 @@ export const LAYOUT = {
     setpointC: 27,
     heatPumpThermalW: 7000,
   } satisfies PoolSpec,
-  pv: { peakW: 6000, systemLoss: 0.12 },
+  // Eight 500 W panels on the south slope of the roof — the ones the 3D view draws.
+  pv: { peakW: 4000, systemLoss: 0.12 },
   baseLoadW: { night: 250, day: 380, evening: 620 },
 };

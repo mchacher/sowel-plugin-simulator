@@ -18,6 +18,10 @@ the plan's, so the physics runs on the rooms a visitor sees.
 
 The device ids of every remaining room are unchanged, and so are the bindings.
 
+**4 kWc, not 6.** Eight 500 W panels on the south slope — the array the 3D view
+draws. Still more than the three deferrable loads together at midday, which is the
+contest the arbiter is there to show.
+
 ## v0.2.0
 
 The first version that simulates anything. Phase 1 of the
