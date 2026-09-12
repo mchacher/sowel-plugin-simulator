@@ -221,6 +221,9 @@ export function additionalDevices(occupantIds: readonly string[]): DeviceSpec[] 
     // contact and says nothing about where the gate is; the contact does, and it
     // joins the Portail equipment so a client reads the gate as one thing.
     { id: "sim-contact-portail", archetype: "contact", room: "jardin" },
+    // The WC's lamp and sensor: see reshape.ts, ADDED_ROOM.
+    { id: "sim-relay-wc-1", archetype: "relay", room: "wc" },
+    { id: "sim-motion-wc-1", archetype: "motion", room: "wc" },
 
     { id: "sim-relay-water-heater", archetype: "relay", load: "water-heater" },
     {

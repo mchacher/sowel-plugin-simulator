@@ -80,6 +80,18 @@ const rooms: Room[] = [
     windows: [{ orientation: "N", areaM2: 1.6, shutterDeviceId: "sim-shutter-bureau-1" }],
   },
   {
+    id: "wc",
+    label: "WC",
+    level: 0,
+    floorAreaM2: 3,
+    lossWPerK: 3,
+    capacityJPerK: 3 * 100_000,
+    setpointC: 19,
+    setpointOffsetK: 1.5,
+    heating: "trv",
+    windows: [],
+  },
+  {
     id: "escalier",
     label: "Escalier",
     level: 0,

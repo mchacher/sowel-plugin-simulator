@@ -17,6 +17,7 @@
  */
 
 import type { Row } from "./derive.js";
+import { columnsOf, shape, stableId } from "./rewrite.js";
 
 /** Zones that go, with every equipment, binding and recipe instance in them. */
 export const DROPPED_ZONES = ["Atelier", "Cave"] as const;
@@ -33,6 +34,15 @@ export const MERGED_LEVELS: Record<string, string> = {
  * stairwell on the ground floor — so that is where its zone goes.
  */
 export const MOVED_ZONES: Record<string, string> = { Escalier: "RDC" };
+
+/**
+ * The one room the pavilion has and the real house does not: a WC off the hall.
+ * Its zone is created here; its lamp and its motion sensor are added like the
+ * other new equipments (`additions.ts`), and the cellar's motion light — whose
+ * cellar is gone — moves in rather than being thrown away.
+ */
+export const ADDED_ROOM = { name: "WC", parent: "RDC", movesRecipeFrom: "Cave" } as const;
+export const WC_LIGHT_EQUIPMENT = "Lumière WC";
 
 export interface ReshapeReport {
   droppedZoneIds: string[];
@@ -63,6 +73,33 @@ export function reshape(tables: Record<string, Row[]>): ReshapeReport {
   tables.order_bindings = tables.order_bindings.filter(
     (row) => !droppedEquipments.has(row.equipment_id as string),
   );
+
+  // The WC: a zone under the ground floor, and the cellar's motion light re-aimed
+  // at it before the cellar's instance would be dropped with the cellar.
+  const wcZoneId = stableId(`zone:${ADDED_ROOM.name}`);
+  const parentId = idByName(tables, ADDED_ROOM.parent);
+  const template = tables.zones.find((row) => row.parent_id === parentId) ?? tables.zones[0];
+  tables.zones.push(
+    shape(columnsOf(tables.zones, []), {
+      ...template,
+      id: wcZoneId,
+      name: ADDED_ROOM.name,
+      parent_id: parentId,
+      icon: null,
+      description: null,
+      display_order: 9,
+    }),
+  );
+  const fromZone = idByName(tables, ADDED_ROOM.movesRecipeFrom);
+  const moved = tables.recipe_instances.find(
+    (row) => row.recipe_id === "motion-light" && String(row.params).includes(fromZone),
+  );
+  if (moved) {
+    const params = JSON.parse(String(moved.params)) as { zone: string; lights: string[] };
+    params.zone = wcZoneId;
+    params.lights = [stableId(`equipment:${WC_LIGHT_EQUIPMENT}`)];
+    moved.params = JSON.stringify(params);
+  }
 
   // A recipe instance is a JSON blob naming zones and equipments; one that names
   // anything dropped would come up pointing at nothing. Whole instances go — a
