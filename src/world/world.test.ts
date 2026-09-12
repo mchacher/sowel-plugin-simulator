@@ -166,3 +166,30 @@ describe("what the house looks like", () => {
     expect(at("2026-07-15T11:00:00Z").forecast.map((d) => d.index)).toEqual([1, 2, 3, 4, 5]);
   });
 });
+
+describe("a motorised gate", () => {
+  it("opens on a pulse, closes on the next, and closes itself in time", () => {
+    const world = new World(CONFIG, HOUSE);
+    let now = Date.parse("2026-06-15T10:00:00Z");
+    world.advance(now);
+    // Stepped a second at a time: a jump of minutes is a rebuild, which forgets
+    // every door on purpose.
+    const after = (seconds: number) => {
+      let state = world.advance(now);
+      for (let i = 0; i < seconds; i++) state = world.advance((now += 1000));
+      return state.contactsClosed["sim-contact-portail"];
+    };
+    expect(after(1)).toBe(true);
+
+    world.pulseGate("sim-gate-1", now);
+    expect(after(2)).toBe(false);
+    // Ninety seconds later it has shut itself.
+    expect(after(95)).toBe(true);
+
+    // Pulsed while open: it shuts.
+    world.pulseGate("sim-gate-1", now);
+    expect(after(2)).toBe(false);
+    world.pulseGate("sim-gate-1", now);
+    expect(after(2)).toBe(true);
+  });
+});

@@ -307,7 +307,7 @@ relay the plugin already publishes.
 
 This shrinks the arbiter's largest deferrable load from 2 400 W to 600 W, so
 **AC7c is re-read rather than failed**: the surplus has to exceed the largest
-flexible load, and at 6 kWc it exceeds all of them together. The contest the
+flexible load, and at 4 kWc (eight 500 W panels, amended 2026-09-11 to match the roof the 3D view draws) it still exceeds all three deferrable ones together. The contest the
 arbiter arbitrates is now the pool heat pump (1 500 W), the pool pump (750 W) and
 the tank (600 W) — 2 850 W against a midday surplus above 4 kW. Still a contest,
 and a truer one.

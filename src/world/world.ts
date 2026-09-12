@@ -83,6 +83,16 @@ const MAX_CATCHUP_S = 900;
 const MOTION_HOLD_S = 60;
 /** How long a door stays open when someone goes through it, seconds. */
 const DOOR_OPEN_S = 9;
+/** How long a gate stays open after its motor is pulsed, before it closes itself. */
+const GATE_OPEN_S = 90;
+/**
+ * The contact that reports where each motorised gate is. The motor's relay is a
+ * momentary pulse; the position lives in the contact, as it does on a real one.
+ */
+const GATE_CONTACT: Record<string, string> = {
+  "sim-gate-1": "sim-contact-portail",
+  "sim-gate-garage-1": "sim-contact-garage",
+};
 /** Days of pool history replayed at start, comfortably past its time constant. */
 const POOL_WARMUP_DAYS = 12;
 /** The pool's cover, which is a thermal input and not only an actuator. */
@@ -415,11 +425,19 @@ export class World {
     this.setShutterPosition(deviceId, move === "OPEN" ? 100 : 0);
   }
 
-  /** A gate order is momentary: the contact closes and releases on its own. */
+  /**
+   * A gate order is momentary: the relay closes and releases on its own. The gate
+   * it drives toggles — open if it was shut, shut if it was open — and an open
+   * gate closes itself after a while, the way a real one does.
+   */
   pulseGate(deviceId: string, now: number): void {
     if (!(deviceId in this.actuators.gates)) return;
     this.actuators.gates[deviceId] = true;
     this.gatePulseUntil.set(deviceId, now + GATE_PULSE_MS);
+    const contact = GATE_CONTACT[deviceId];
+    if (!contact) return;
+    if ((this.doorOpenUntil.get(contact) ?? 0) > now) this.doorOpenUntil.delete(contact);
+    else this.doorOpenUntil.set(contact, now + GATE_OPEN_S * 1000);
   }
 
   setThermostatPower(deviceId: string, on: boolean): void {
@@ -707,7 +725,9 @@ export class World {
       if (wasPresent !== undefined && wasPresent !== occupant.present) {
         this.doorOpenUntil.set("sim-contact-entree", ts + DOOR_OPEN_S * 1000);
         if (occupant.id === "adulte-1") {
+          // The car: the garage door, and the gate on the drive for it to get out.
           this.doorOpenUntil.set("sim-contact-garage", ts + 2 * DOOR_OPEN_S * 1000);
+          this.doorOpenUntil.set("sim-contact-portail", ts + 3 * DOOR_OPEN_S * 1000);
         }
       }
       this.presence.set(occupant.id, occupant.present);

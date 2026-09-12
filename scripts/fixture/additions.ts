@@ -76,6 +76,19 @@ export const NEW_EQUIPMENTS: NewEquipment[] = [
     deviceIds: ["sim-appliance-washing-machine"],
   },
   { name: "Simulation", type: "switch", deviceIds: ["sim-house"] },
+  // The WC off the hall: the pavilion's one room the real house lacks. A lamp and
+  // a motion sensor, which is the smallest room that still shows a recipe at work.
+  { name: "Lumière WC", type: "light_onoff", room: "wc", deviceIds: ["sim-relay-wc-1"] },
+  { name: "PIR WC", type: "sensor", room: "wc", deviceIds: ["sim-motion-wc-1"] },
+  {
+    // Adopted: the fixture's gate has a motor relay and nothing that says where
+    // the gate is. The contact is a *new* reading on an existing equipment, which
+    // is what adoption is for — attaching by name only re-points bindings the
+    // fixture already had, and it had none for this.
+    name: "Portail",
+    type: "gate",
+    deviceIds: ["sim-contact-portail"],
+  },
   {
     // The fixture has this equipment and **no bindings at all** behind it — a
     // pool cover nobody ever wired up. It is adopted rather than recreated, so

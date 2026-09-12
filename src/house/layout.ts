@@ -15,14 +15,19 @@
 import type { LoadSpec, Occupant, PoolSpec, Room } from "./types.js";
 
 const rooms: Room[] = [
+  // The pavilion: a ground floor and one storey, the garage attached on the east.
+  // Areas and orientations are the 3D plan's (sowel-house-3d, `scripts/plan/`),
+  // which is the drawing of this house; the physics runs on the same rooms a
+  // visitor sees, at the same size, facing the same way.
+
   // ── Ground floor ─────────────────────────────────────────────────────────
   {
     id: "entree",
     label: "Entrée",
     level: 0,
-    floorAreaM2: 8,
+    floorAreaM2: 7.5,
     lossWPerK: 7,
-    capacityJPerK: 8 * 100_000,
+    capacityJPerK: 7.5 * 100_000,
     setpointC: 19,
     setpointOffsetK: 1.5,
     heating: "trv",
@@ -32,13 +37,14 @@ const rooms: Room[] = [
     id: "sejour",
     label: "Séjour",
     level: 0,
-    floorAreaM2: 38,
-    lossWPerK: 32,
-    capacityJPerK: 38 * 100_000,
+    floorAreaM2: 47,
+    lossWPerK: 38,
+    capacityJPerK: 47 * 100_000,
     setpointC: 20.5,
     // The pellet stove: a local unit with its own setpoint, and the reason the
     // living room is the one room that does not simply follow the house.
     heating: "thermostat",
+    // Two bays onto the terrace, one window to the west.
     windows: [
       { orientation: "S", areaM2: 5.2, shutterDeviceId: "sim-shutter-sejour-1" },
       { orientation: "S", areaM2: 3.4, shutterDeviceId: "sim-shutter-sejour-2" },
@@ -49,14 +55,15 @@ const rooms: Room[] = [
     id: "cuisine",
     label: "Cuisine",
     level: 0,
-    floorAreaM2: 14,
-    lossWPerK: 13,
-    capacityJPerK: 14 * 100_000,
+    floorAreaM2: 20,
+    lossWPerK: 17,
+    capacityJPerK: 20 * 100_000,
     setpointC: 20,
     setpointOffsetK: 0.5,
     heating: "trv",
+    // A window over the sink to the street, and the glazed door to the side.
     windows: [
-      { orientation: "E", areaM2: 1.8, shutterDeviceId: "sim-shutter-cuisine-1" },
+      { orientation: "N", areaM2: 1.8, shutterDeviceId: "sim-shutter-cuisine-1" },
       { orientation: "E", areaM2: 3.6, shutterDeviceId: "sim-shutter-cuisine-2" },
     ],
   },
@@ -64,13 +71,50 @@ const rooms: Room[] = [
     id: "bureau",
     label: "Bureau",
     level: 0,
-    floorAreaM2: 12,
-    lossWPerK: 11,
-    capacityJPerK: 12 * 100_000,
+    floorAreaM2: 10.5,
+    lossWPerK: 10,
+    capacityJPerK: 10.5 * 100_000,
     setpointC: 20,
     setpointOffsetK: 0.5,
     heating: "trv",
     windows: [{ orientation: "N", areaM2: 1.6, shutterDeviceId: "sim-shutter-bureau-1" }],
+  },
+  {
+    id: "wc",
+    label: "WC",
+    level: 0,
+    floorAreaM2: 3,
+    lossWPerK: 3,
+    capacityJPerK: 3 * 100_000,
+    setpointC: 19,
+    setpointOffsetK: 1.5,
+    heating: "trv",
+    windows: [],
+  },
+  {
+    id: "escalier",
+    label: "Escalier",
+    level: 0,
+    floorAreaM2: 7.5,
+    lossWPerK: 5,
+    capacityJPerK: 7.5 * 100_000,
+    setpointC: 18,
+    setpointOffsetK: 2.5,
+    // A stairwell is heated by the rooms around it, not by a valve of its own.
+    heating: "none",
+    windows: [],
+  },
+  {
+    id: "garage",
+    label: "Garage",
+    level: 0,
+    floorAreaM2: 30,
+    // Three outside walls and a door the size of a car: it follows the weather.
+    lossWPerK: 45,
+    capacityJPerK: 30 * 100_000,
+    setpointC: 12,
+    heating: "none",
+    windows: [],
   },
 
   // ── First floor ──────────────────────────────────────────────────────────
@@ -78,9 +122,9 @@ const rooms: Room[] = [
     id: "chambre-parents",
     label: "Chambre Parents",
     level: 1,
-    floorAreaM2: 16,
-    lossWPerK: 15,
-    capacityJPerK: 16 * 100_000,
+    floorAreaM2: 18,
+    lossWPerK: 16,
+    capacityJPerK: 18 * 100_000,
     setpointC: 18.5,
     setpointOffsetK: 2,
     heating: "trv",
@@ -90,109 +134,53 @@ const rooms: Room[] = [
     id: "chambre-enfant-1",
     label: "Chambre Enfant 1",
     level: 1,
-    floorAreaM2: 12,
-    lossWPerK: 12,
-    capacityJPerK: 12 * 100_000,
+    floorAreaM2: 15.75,
+    lossWPerK: 14,
+    capacityJPerK: 15.75 * 100_000,
     setpointC: 18.5,
     setpointOffsetK: 2,
     heating: "trv",
-    windows: [{ orientation: "E", areaM2: 1.8, shutterDeviceId: "sim-shutter-chambre-enfant-1-1" }],
+    windows: [{ orientation: "S", areaM2: 1.8, shutterDeviceId: "sim-shutter-chambre-enfant-1-1" }],
+  },
+  {
+    id: "chambre-enfant-2",
+    label: "Chambre Enfant 2",
+    level: 1,
+    floorAreaM2: 13.5,
+    lossWPerK: 12,
+    capacityJPerK: 13.5 * 100_000,
+    setpointC: 18.5,
+    setpointOffsetK: 2,
+    // An electric radiator, where the heat pump's circuit does not go.
+    heating: "heater",
+    // No shutter in the fixture: a plain window, and nothing to close over it.
+    windows: [{ orientation: "S", areaM2: 1.2 }],
+  },
+  {
+    id: "chambre-enfant-3",
+    label: "Chambre Enfant 3",
+    level: 1,
+    floorAreaM2: 16,
+    lossWPerK: 15,
+    capacityJPerK: 16 * 100_000,
+    setpointC: 18.5,
+    setpointOffsetK: 2,
+    heating: "heater",
+    windows: [{ orientation: "N", areaM2: 1.4, shutterDeviceId: "sim-shutter-chambre-enfant-3-1" }],
   },
   {
     id: "salle-de-bain",
     label: "Salle de Bain",
     level: 1,
-    floorAreaM2: 7,
-    lossWPerK: 8,
-    capacityJPerK: 7 * 100_000,
+    floorAreaM2: 10.5,
+    lossWPerK: 10,
+    capacityJPerK: 10.5 * 100_000,
     setpointC: 21,
     // Warmer than the bedrooms it sits between: its valve is opened, not turned
     // down. The fixture has no radiator of its own here.
     setpointOffsetK: -0.5,
     heating: "trv",
     windows: [{ orientation: "N", areaM2: 0.6, shutterDeviceId: "sim-shutter-salle-de-bain-1" }],
-  },
-
-  // ── Second floor ─────────────────────────────────────────────────────────
-  {
-    id: "chambre-enfant-2",
-    label: "Chambre Enfant 2",
-    level: 2,
-    floorAreaM2: 11,
-    lossWPerK: 11,
-    capacityJPerK: 11 * 100_000,
-    setpointC: 18.5,
-    setpointOffsetK: 2,
-    // An electric radiator upstairs, where the heat pump's circuit does not go.
-    heating: "heater",
-    // No shutter in the fixture: a roof window, and nothing to close over it.
-    windows: [{ orientation: "W", areaM2: 1.2 }],
-  },
-  {
-    id: "chambre-enfant-3",
-    label: "Chambre Enfant 3",
-    level: 2,
-    floorAreaM2: 11,
-    lossWPerK: 11,
-    capacityJPerK: 11 * 100_000,
-    setpointC: 18.5,
-    setpointOffsetK: 2,
-    heating: "heater",
-    windows: [{ orientation: "E", areaM2: 1.4, shutterDeviceId: "sim-shutter-chambre-enfant-3-1" }],
-  },
-  {
-    id: "escalier",
-    label: "Escalier",
-    level: 2,
-    floorAreaM2: 9,
-    lossWPerK: 6,
-    capacityJPerK: 9 * 100_000,
-    setpointC: 18,
-    setpointOffsetK: 2.5,
-    // A stairwell is heated by the rooms around it, not by a valve of its own.
-    heating: "none",
-    windows: [],
-  },
-
-  // ── Basement ─────────────────────────────────────────────────────────────
-  {
-    id: "garage",
-    label: "Garage",
-    level: -1,
-    floorAreaM2: 22,
-    lossWPerK: 40,
-    capacityJPerK: 22 * 100_000,
-    setpointC: 12,
-    heating: "none",
-    windows: [],
-  },
-  {
-    id: "cave",
-    label: "Cave",
-    level: -1,
-    floorAreaM2: 14,
-    // A cellar is surrounded by earth: it loses very little, very slowly, and to
-    // the ground rather than to the air. That stability is the whole point of a
-    // cellar, and it shows on a chart.
-    groundCoupled: true,
-    lossWPerK: 6,
-    capacityJPerK: 14 * 260_000,
-    setpointC: 13,
-    heating: "none",
-    windows: [],
-  },
-  {
-    id: "atelier",
-    label: "Atelier",
-    level: -1,
-    floorAreaM2: 18,
-    // Also below ground, but with a door to the garage and less earth around it.
-    groundCoupled: true,
-    lossWPerK: 14,
-    capacityJPerK: 18 * 160_000,
-    setpointC: 14,
-    heating: "none",
-    windows: [],
   },
 
   // ── Outdoors ─────────────────────────────────────────────────────────────
@@ -226,9 +214,9 @@ const rooms: Room[] = [
     id: "terrasse",
     label: "Terrasse",
     level: null,
-    floorAreaM2: 25,
+    floorAreaM2: 31.5,
     lossWPerK: 10_000,
-    capacityJPerK: 25 * 100_000,
+    capacityJPerK: 31.5 * 100_000,
     setpointC: 0,
     heating: "none",
     windows: [],
@@ -285,7 +273,7 @@ const occupants: Occupant[] = [
 
 /**
  * Sizing is not decoration (spec 001, FR9b). An arbiter with no surplus, or with
- * a surplus smaller than its smallest load, demonstrates nothing: 6 kWc against a
+ * a surplus smaller than its smallest load, demonstrates nothing: 4 kWc against a
  * 2 400 W water heater and a 750 W pool pump is a real contest at midday, which is
  * the exact scenario core spec 140 was written for.
  */
@@ -331,6 +319,7 @@ export const LAYOUT = {
     setpointC: 27,
     heatPumpThermalW: 7000,
   } satisfies PoolSpec,
-  pv: { peakW: 6000, systemLoss: 0.12 },
+  // Eight 500 W panels on the south slope of the roof — the ones the 3D view draws.
+  pv: { peakW: 4000, systemLoss: 0.12 },
   baseLoadW: { night: 250, day: 380, evening: 620 },
 };
