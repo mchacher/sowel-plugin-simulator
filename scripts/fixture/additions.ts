@@ -43,8 +43,14 @@ export const NEW_EQUIPMENTS: NewEquipment[] = [
   { name: "Porte d'Entrée", type: "sensor", room: "entree", deviceIds: ["sim-contact-entree"] },
   { name: "Porte-Fenêtre", type: "sensor", room: "sejour", deviceIds: ["sim-contact-sejour"] },
   {
-    name: "Porte Garage Contact",
-    type: "sensor",
+    // Adopted, like the Portail below. The core derives a gate's open/closed from a
+    // `contact_door` reading **on the gate equipment itself** (`deriveGateState`),
+    // so a contact on an equipment of its own left the door at `unknown` for ever.
+    // The real house carried the position on a LoRa reed switch (`RS1`), which the
+    // rewrite drops as generic; the contact is its stand-in, and it has to sit where
+    // the reed switch sat.
+    name: "Porte Garage",
+    type: "gate",
     room: "garage",
     deviceIds: ["sim-contact-garage"],
   },
