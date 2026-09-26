@@ -107,13 +107,19 @@ visitor makes presence is a ghost of their own.
 
 ### FR5 — Per-target debounce
 
-An order on a target that changed less than a few seconds ago is ignored and logged
-at `debug`. The target is the device and the order key together, so two visitors in
-two rooms never contend.
+An order on a target that changed less than a third of a second ago is ignored and
+logged at `debug`. The target is the device and the order key together, so two
+visitors in two rooms never contend.
 
 This is where the "ten hands on one lamp" rule lives, because the core has no demo
 mode. It is deliberately short: long enough that a lamp cannot strobe, short enough
 that a visitor never feels the house ignoring them.
+
+**Amended 2026-09-26: three seconds was not short.** A visitor switching a lamp on
+and off, pressing + twice on a thermostat, or sending a shutter down and stopping it
+had the second click swallowed, and the house felt deaf. A shutter or a gate did not
+need the longer window either: their real controllers take a second press as a
+second press. One window for everything, `DEBOUNCE_MS = 300`.
 
 A `STOP` on a moving shutter is exempt. Debouncing a stop is how a shutter ends up
 somewhere nobody asked for.

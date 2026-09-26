@@ -32,7 +32,7 @@ The core repo is expected as a sibling directory (`../sowel`) for cross-referenc
 - **Deterministic given the clock**, with small seeded randomness. The same day replays the same way.
 - **Spec 111 isolation**: this plugin can only write devices whose `integrationId === "simulator"`, read settings under `integration.simulator.*` plus `home.latitude/longitude/timezone`, and emit only `system.integration.*` / `system.alarm.*` events. Do not fight the Proxy; design within it.
 - **Never throw** from a handler or from `executeOrder`. Log with `{ err }` and degrade.
-- **Per-target debounce** lives here: an order on a target that changed less than a few seconds ago is ignored (and logged at debug).
+- **Per-target debounce** lives here: an order on a target that changed less than a third of a second ago is ignored (and logged at debug). Anti-strobe only — three seconds swallowed visitors' second clicks.
 - **No InfluxDB writes, no backfill.** Not possible from a plugin, and not wanted.
 
 ## Tech

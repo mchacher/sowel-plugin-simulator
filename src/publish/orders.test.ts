@@ -207,20 +207,39 @@ describe("orders change the world", () => {
 });
 
 describe("the debounce", () => {
-  it("ignores a second order on the same target inside the window", () => {
-    const h = harness();
-    h.router.execute("sim-relay-sejour-1", "state", true);
-    h.advance(500);
-    h.router.execute("sim-relay-sejour-1", "state", false);
-    expect(h.tick().actuators.relays["sim-relay-sejour-1"]).toBe(true);
-  });
-
-  it("lets the same order through once the window has passed", () => {
+  it("obeys a lamp switched on then off in quick succession", () => {
+    // Reported: two close clicks on a light, the second ignored. A human double
+    // click is well over a third of a second.
     const h = harness();
     h.router.execute("sim-relay-sejour-1", "state", true);
     h.advance(DEBOUNCE_MS + 100);
     h.router.execute("sim-relay-sejour-1", "state", false);
     expect(h.tick().actuators.relays["sim-relay-sejour-1"]).toBe(false);
+  });
+
+  it("still will not let a lamp be strobed", () => {
+    const h = harness();
+    h.router.execute("sim-relay-sejour-1", "state", true);
+    h.advance(100);
+    h.router.execute("sim-relay-sejour-1", "state", false);
+    expect(h.tick().actuators.relays["sim-relay-sejour-1"]).toBe(true);
+  });
+
+  it("obeys a shutter sent down and then back up a second later", () => {
+    const h = harness();
+    h.router.execute("sim-shutter-sejour-1", "position", 0);
+    h.advance(1000);
+    h.router.execute("sim-shutter-sejour-1", "position", 100);
+    expect(h.tick(60_000).actuators.shutters["sim-shutter-sejour-1"]).toBe(100);
+  });
+
+  it("obeys a gate pressed twice a second apart, as its controller would", () => {
+    const h = harness();
+    h.router.execute("sim-gate-1", "R1", true);
+    h.advance(1000);
+    // The second press shuts what the first opened.
+    h.router.execute("sim-gate-1", "R1", true);
+    expect(h.tick().contactsClosed["sim-contact-portail"]).toBe(true);
   });
 
   it("never makes two visitors in two rooms contend", () => {
