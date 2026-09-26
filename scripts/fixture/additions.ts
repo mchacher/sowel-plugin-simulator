@@ -85,6 +85,28 @@ export const NEW_EQUIPMENTS: NewEquipment[] = [
   // The WC off the hall: the pavilion's one room the real house lacks. A lamp and
   // a motion sensor, which is the smallest room that still shows a recipe at work.
   { name: "Lumière WC", type: "light_onoff", room: "wc", deviceIds: ["sim-relay-wc-1"] },
+  // Rooms the real house never wired a light in, which in a demo reads as a
+  // missing light rather than as a choice: the study, the first child's bedroom
+  // and the bathroom. Named after their room, like the WC's, because equipment ids
+  // are derived from names and three "Lumière" would be one equipment.
+  {
+    name: "Lumière Bureau",
+    type: "light_onoff",
+    room: "bureau",
+    deviceIds: ["sim-relay-bureau-1"],
+  },
+  {
+    name: "Lumière Chambre Enfant 1",
+    type: "light_onoff",
+    room: "chambre-enfant-1",
+    deviceIds: ["sim-relay-chambre-enfant-1-1"],
+  },
+  {
+    name: "Lumière Salle de Bain",
+    type: "light_onoff",
+    room: "salle-de-bain",
+    deviceIds: ["sim-relay-salle-de-bain-1"],
+  },
   { name: "PIR WC", type: "sensor", room: "wc", deviceIds: ["sim-motion-wc-1"] },
   {
     // Adopted: the fixture's gate has a motor relay and nothing that says where

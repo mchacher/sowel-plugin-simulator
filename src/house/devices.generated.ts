@@ -74,6 +74,8 @@ export const GENERATED_DEVICES: DeviceSpec[] = [
   },
   { id: "sim-pv", archetype: "pv" },
   { id: "sim-rain", archetype: "rain_gauge" },
+  { id: "sim-relay-bureau-1", archetype: "relay", room: "bureau" },
+  { id: "sim-relay-chambre-enfant-1-1", archetype: "relay", room: "chambre-enfant-1" },
   { id: "sim-relay-chambre-enfant-2-1", archetype: "relay", room: "chambre-enfant-2" },
   { id: "sim-relay-chambre-enfant-3-1", archetype: "relay", room: "chambre-enfant-3" },
   { id: "sim-relay-chambre-parents-1", archetype: "relay", room: "chambre-parents" },
@@ -86,6 +88,7 @@ export const GENERATED_DEVICES: DeviceSpec[] = [
   { id: "sim-relay-jardin-4", archetype: "relay", room: "jardin" },
   { id: "sim-relay-piscine-1", archetype: "relay", room: "piscine" },
   { id: "sim-relay-pool-pump", archetype: "relay", room: "piscine", load: "pool-pump" },
+  { id: "sim-relay-salle-de-bain-1", archetype: "relay", room: "salle-de-bain" },
   { id: "sim-relay-sejour-1", archetype: "relay", room: "sejour" },
   { id: "sim-relay-water-heater", archetype: "relay", load: "water-heater" },
   {
