@@ -20,6 +20,16 @@ until someone closes it. A past computed with nobody closing anything would be a
 house where nothing ever runs. So the past is played with **habits** — the simplest
 version of what the fixture's own automation does — and says so.
 
+### A rule this amends
+
+`CLAUDE.md` says: _no InfluxDB writes, no backfill — not possible from a plugin, and
+not wanted._ The first half stands: the plugin still writes nothing but its devices'
+readings, live. The second half is what the owner has now asked for, and this spec is
+where it changes. The generator is not the plugin at runtime: it is an offline tool
+shipped in the same package, it writes files, and the core's own restore is what puts
+them in InfluxDB. `CLAUDE.md` is amended to say so. "Real time only" stands untouched:
+nothing here speeds up a clock; the past is computed, the present is still lived.
+
 ## Goals
 
 - A generator that writes, for the demo fixture, the history the core would have

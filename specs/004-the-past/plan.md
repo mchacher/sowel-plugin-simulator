@@ -2,6 +2,7 @@
 
 | Step | What                                                            | Test                                    | State |
 | ---- | --------------------------------------------------------------- | --------------------------------------- | ----- |
+| 0    | `CLAUDE.md`: the backfill rule amended, pointing here.          | review                                  | 📝    |
 | 1    | `habits.ts`; the warm-up uses it.                               | `habits.test.ts`; `world.test.ts` green | 📝    |
 | 2    | `bindings.ts`: historized bindings from the fixture.            | against `demo-fr.zip`                   | 📝    |
 | 3    | `replay.ts`: days → readings, through the live publish mapping. | a replayed hour equals a live one       | 📝    |
