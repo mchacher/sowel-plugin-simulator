@@ -22,6 +22,22 @@ The device ids of every remaining room are unchanged, and so are the bindings.
 draws. Still more than the three deferrable loads together at midday, which is the
 contest the arbiter is there to show.
 
+**Doors that say where they are.** The gate and the garage door each carry a
+contact on their own equipment, which is where the core reads a gate's state from:
+the motor's pulse opens or shuts them, an open gate closes itself after ninety
+seconds, and the car takes the gate when an adult drives in or out.
+
+**A WC, and three lights.** A WC off the hall with a lamp, a motion sensor and the
+motion-light instance the cellar lost. A light in the study, the first child's
+bedroom and the bathroom, where the real house has none. 84 equipments, 21 recipe
+instances.
+
+**A house that answers like hardware.** One debounce window of 300 ms for every
+target — three seconds swallowed a visitor's second click. An order's echo goes out
+at once rather than on the next tick, and a dimmer switched off keeps its level:
+both were letting a motion-light recipe mistake its own orders for a hand on the
+switch.
+
 ## v0.2.0
 
 The first version that simulates anything. Phase 1 of the

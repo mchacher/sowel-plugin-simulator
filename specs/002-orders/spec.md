@@ -45,15 +45,15 @@ Three pieces, and they are separable only on paper:
 
 For each archetype, the orders in `docs/devices.md`:
 
-| Archetype            | Order                                | Effect                                                                                |
-| -------------------- | ------------------------------------ | ------------------------------------------------------------------------------------- |
-| Relay, valve, heater | `state`                              | The relay closes or opens. A heater's room stops being heated when its relay is open. |
-| Multi-channel relay  | `power1`…`power4`                    | That channel only.                                                                    |
-| Dimmer               | `state`, `brightness`                | Brightness ramps rather than jumping; setting a brightness on a dark lamp lights it.  |
-| Shutter              | `position`, `state`                  | The shutter **travels**; `OPEN` / `CLOSE` / `STOP` drive and interrupt the travel.    |
-| Gate                 | `R1`                                 | A pulse: the contact closes and releases on its own.                                  |
-| Thermostat           | `power`, `setpoint`, `operationMode` | Its room's heating follows.                                                           |
-| Pool heat pump       | `setpoint`                           | The pool's target.                                                                    |
+| Archetype            | Order                                | Effect                                                                                                                         |
+| -------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| Relay, valve, heater | `state`                              | The relay closes or opens. A heater's room stops being heated when its relay is open.                                          |
+| Multi-channel relay  | `power1`…`power4`                    | That channel only.                                                                                                             |
+| Dimmer               | `state`, `brightness`                | Brightness ramps rather than jumping; setting a brightness on a dark lamp lights it. Off keeps the level (amended 2026-09-26). |
+| Shutter              | `position`, `state`                  | The shutter **travels**; `OPEN` / `CLOSE` / `STOP` drive and interrupt the travel.                                             |
+| Gate                 | `R1`                                 | A pulse: the relay closes and releases on its own, and the gate's contact toggles (amended 2026-09-11).                        |
+| Thermostat           | `power`, `setpoint`, `operationMode` | Its room's heating follows.                                                                                                    |
+| Pool heat pump       | `setpoint`                           | The pool's target.                                                                                                             |
 
 **An order changes the world, not the reading.** The reading follows because the
 model changed — a shutter's `position` is reported from where the shutter actually
@@ -169,9 +169,46 @@ and a core engine acting through the ordinary order path.
 | Case                                                       | Expected                                                                               |
 | ---------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | `brightness` ordered on a lamp that is off                 | The lamp lights. That is what every real dimmer does.                                  |
+| `state` OFF on a dimmer at 60 %                            | The lamp goes dark and still reports 60 %; ON brings it back to 60 %.                  |
 | `position` ordered while the shutter is already travelling | The new target wins; the travel continues from where it is.                            |
 | A setpoint outside the declared bounds                     | Clamped, logged at `debug`. Refusing would be a worse demo than clamping.              |
 | `sim.ghost` naming a room that does not exist              | Ignored, logged at `debug`.                                                            |
 | Two visitors moving the same ghost id                      | Last one wins. Ghost identity is the 3D application's to allocate.                     |
 | An order arriving before `start()` finished                | Ignored; the world is not there yet.                                                   |
 | A mode or a recipe ordering the same target as a visitor   | Debounced like any other order. The house does not know who is asking, and should not. |
+
+## Amendments
+
+### 2026-09-11 — the gate knows where it is
+
+A gate motor's relay is a momentary contact and says nothing about the gate. The
+real house lives with that; a demo cannot, because a visitor who opens the gate
+wants to see it open. The gate and the garage door each gain a contact (spec 003's
+amendment of the same day adopts it onto their equipment). A pulse on the motor
+opens a gate that was shut and shuts one that was open; an open gate closes itself
+after ninety seconds, as a real one does. The car takes the gate with it: when the
+first adult leaves or comes back, the drive is open for the manoeuvre. `sim.open`
+and `sim.close` come with the contact, as on every other door.
+
+### 2026-09-26 — the echo goes out at once (FR2)
+
+FR2 had the echo wait for the next tick, up to a second, where hardware answers in
+a few hundred milliseconds. On the running showroom that second was a door into a
+recipe's override: the motion light switched its lamps on, a zone update arrived
+before the echo — the living room reports several times a second — and "motion,
+lamp off" read as somebody switching it off by hand. `executeOrder` now runs a tick
+at once, so the echo still goes out through the tick's own path — one voice
+publishing — and the window is back to hardware's size. A relay answers within the
+order; what travels (a shutter, a dimmer's ramp) still travels.
+
+### 2026-09-26 — a dimmer switched off keeps its level (FR1)
+
+Switching a dimmer off ramped its level to 0, against every Zigbee dimmer, which
+keeps reporting the level it will come back to. The ramp published a run of
+brightness values nobody had asked for, and the dimmable motion light read them as
+a hand on the dimmer. Off is now the state only: the level stays, and switching on
+comes back to it — or to full, for a lamp that never had one.
+
+The recipes have the fragility too — no grace after their own switch-on, none on
+brightness after their own switch-off — and that belongs in their repositories
+(`sowel-recipe-motion-light-dimmable#5`, `sowel-recipe-motion-light#6`).
