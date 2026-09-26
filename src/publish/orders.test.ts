@@ -170,6 +170,26 @@ describe("orders change the world", () => {
     expect(h.tick(10_000).actuators.shutters["sim-shutter-sejour-1"]).toBe(stopped);
   });
 
+  it("keeps a dimmer's level when it is switched off, and comes back to it", () => {
+    // Ramping the level to 0 on OFF published brightness values nobody had asked
+    // for, and a recipe watching for a manual brightness change took them for one.
+    const h = harness();
+    h.router.execute("sim-dimmer-sejour-1", "brightness", 180);
+    h.tick(2000);
+    h.advance(1000);
+    h.router.execute("sim-dimmer-sejour-1", "state", false);
+    const seen: number[] = [];
+    for (let i = 0; i < 4; i++)
+      seen.push(h.tick(250).actuators.dimmers["sim-dimmer-sejour-1"].brightness);
+    expect(h.tick().actuators.dimmers["sim-dimmer-sejour-1"].on).toBe(false);
+    expect(seen.every((b) => b === 180)).toBe(true);
+    h.advance(1000);
+    h.router.execute("sim-dimmer-sejour-1", "state", true);
+    const back = h.tick(2000).actuators.dimmers["sim-dimmer-sejour-1"];
+    expect(back.on).toBe(true);
+    expect(back.brightness).toBe(180);
+  });
+
   it("lights a dark lamp when a brightness is set on it", () => {
     h.router.execute("sim-dimmer-sejour-1", "brightness", 200);
     const dimmer = h.tick(2000).actuators.dimmers["sim-dimmer-sejour-1"];

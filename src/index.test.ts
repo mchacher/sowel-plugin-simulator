@@ -118,7 +118,7 @@ describe("the plugin", () => {
     expect(await run("1789")).not.toEqual(await run("2026"));
   });
 
-  it("acts on an order and echoes it on the next tick, not from inside the order", async () => {
+  it("echoes an order at once, through the tick's own path", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(Date.parse("2026-06-22T09:00:00Z"));
     const { deps, updates } = fakeDeps(PARIS);
@@ -128,11 +128,10 @@ describe("the plugin", () => {
     const lamp = device("sim-relay-sejour-1");
     const before = updates.length;
     await plugin.executeOrder(lamp, "state", true);
-    // Nothing published from inside the order: an order and the physics that
-    // follow it cannot disagree if only one of them speaks.
-    expect(updates.length).toBe(before);
-
-    await vi.advanceTimersByTimeAsync(2000);
+    // Echoed before the order returns, as hardware answers in a fraction of a
+    // second — waiting a whole tick let a recipe see "motion, lamp off" in between
+    // and take its own order for a hand on the switch. Still from the world's state:
+    // the order runs a tick, it does not speak for itself.
     const echo = updates.slice(before).filter((u) => u.id === "sim-relay-sejour-1");
     expect(echo.at(-1)?.payload).toEqual({ state: true });
     await plugin.stop();

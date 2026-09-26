@@ -159,8 +159,16 @@ class SimulatorPlugin implements IntegrationPlugin {
   }
 
   /**
-   * Change the world; the reading follows on the next tick because the model
-   * changed. Nothing is published from here.
+   * Change the world, then run a tick at once: the echo goes out now, through the
+   * tick's own path, so the reading still comes from the model and there is still
+   * only one voice publishing.
+   *
+   * It used to wait for the next tick, up to a second, where a real Zigbee device
+   * answers in a few hundred milliseconds. That second was a window: a recipe that
+   * had just switched a lamp on saw a zone update arrive before the echo, read "the
+   * lamp is off and there is motion" as a hand on the switch, and went into
+   * override. The recipes should tolerate the window (see their issues); the
+   * simulator should not open it wider than hardware does.
    *
    * This is one of the methods the core rethrows from, so a throw would surface
    * as a failed order in a visitor's face. It never throws.
@@ -172,6 +180,7 @@ class SimulatorPlugin implements IntegrationPlugin {
         return;
       }
       this.orders.execute(device.sourceDeviceId, orderKey, value);
+      this.tick(Date.now());
     } catch (err) {
       this.logger.error({ err, deviceId: device.sourceDeviceId, orderKey }, "Order failed");
     }

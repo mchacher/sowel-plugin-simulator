@@ -385,15 +385,20 @@ export class World {
     const dimmer = this.actuators.dimmers[deviceId];
     if (!dimmer) return;
     dimmer.on = on;
-    // Switching a dimmer on with nothing set is a lamp at full, like every
-    // real one; switching it off leaves the level alone so the next `on`
-    // returns to it.
-    this.transitions.start(
-      deviceId,
-      dimmer.brightness,
-      on ? Math.max(dimmer.brightness, 254) : 0,
-      DIMMER_RATE_PER_S,
-    );
+    if (!on) {
+      // Off is the state, not the level: a Zigbee dimmer switched off keeps
+      // reporting the brightness it will come back to. This used to ramp the level
+      // down to 0 instead, publishing a run of brightness values nobody had asked
+      // for — and the motion-light-dimmable recipe, which reads an unexpected
+      // brightness as a hand on the dimmer, went into override every time it
+      // switched the lights off itself because the room had grown bright.
+      const at = this.transitions.stop(deviceId);
+      if (at !== undefined) dimmer.brightness = at;
+      return;
+    }
+    // Switching a dimmer on with nothing set is a lamp at full, like every real
+    // one; with a level set, it comes back to that level.
+    if (dimmer.brightness <= 0) this.transitions.start(deviceId, 0, 254, DIMMER_RATE_PER_S);
   }
 
   setDimmerBrightness(deviceId: string, brightness: number): void {
