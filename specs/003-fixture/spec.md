@@ -259,6 +259,61 @@ never granted is indistinguishable from a human override. The schedule was mine 
 remove — the pump's hours in this house are a Sowel recipe's — and it is gone
 (spec 001's own amendment).
 
+### 2026-09-11 — the demo house is a pavilion
+
+The fixture describes a real house: four levels, a cellar and a workshop under the
+garage, two children's rooms on a second floor. Drawn in three dimensions that is
+a tower, and phase 3 found that a tower cannot be read — the storey above hides the
+one below, and a visitor asking what the kitchen is doing has to peel three floors
+off first. The user's call: a simple house, a ground floor and one storey, with a
+garage door worth showing.
+
+So the builder reshapes the backup **before** deriving anything
+(`scripts/fixture/reshape.ts`):
+
+- `Atelier` and `Cave` go, with their six equipments, their bindings and the two
+  motion-light instances that named them. A motion light with its lamp removed is
+  not a recipe with fewer lamps.
+- `Sous-sol` folds into `RDC` and `Etage 2` into `Etage 1`: children re-parented,
+  every `zone_id` and every zone id inside a recipe's params or a widget's config
+  rewritten, duplicate mode impacts collapsed, the level zone deleted.
+- `Escalier` moves under `RDC`, because the stairs start in the hall.
+
+Fourteen rooms, 68 equipments, 20 recipe instances. `layout.ts` now carries the 3D
+plan's areas and orientations (`sowel-house-3d/scripts/plan/showroom.ts`), so the
+house the physics runs on and the house a visitor sees are one house. FR1's "the
+house description grows to the fixture" still holds — it grows to the fixture
+_as reshaped_, and the reshape is the one place the demo house departs from the
+real one, on record.
+
+### 2026-09-11 — the gate and the garage door report where they are
+
+The core derives a gate's open/closed from a `contact_door` reading **on the gate
+equipment itself** (`deriveGateState`). The fixture's `Portail` had a motor relay
+and nothing saying where the gate was; `Porte Garage` had carried its position on a
+LoRa reed switch (`RS1`) that the rewrite drops as generic. Both now adopt a
+simulated contact (`sim-contact-portail`, `sim-contact-garage`) — adoption, as for
+the pool cover, because attaching by name only re-points bindings the fixture
+already had. A first cut gave the garage contact an equipment of its own, and the
+door the visitor can open reported `unknown` for ever; that equipment is gone.
+
+### 2026-09-12 — a WC off the hall
+
+The one room the pavilion has and the real house lacks. The reshape creates its
+zone under the ground floor; it gets a lamp and a motion sensor; and the cellar's
+motion-light instance, whose cellar is gone, is re-aimed at it rather than thrown
+away — the smallest room that still shows a recipe at work.
+
+### 2026-09-26 — a light in every room a visitor looks into
+
+The real house never wired a light in the study, the first child's bedroom or the
+bathroom, which in a demo reads as a missing light rather than a choice. Each gets
+one relay and one `light_onoff` equipment, named after its room — "Lumière Bureau",
+"Lumière Chambre Enfant 1", "Lumière Salle de Bain" — because equipment ids are
+derived from names and three "Lumière" would be one equipment.
+
+The fixture now holds 19 zones, 92 devices, 84 equipments and 21 recipe instances.
+
 ## The phase 1 gate, walked
 
 On a stock Sowel 1.68.0 in Docker: instance wiped, plugin installed, fixture

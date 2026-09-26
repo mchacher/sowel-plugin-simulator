@@ -43,8 +43,14 @@ export const NEW_EQUIPMENTS: NewEquipment[] = [
   { name: "Porte d'Entrée", type: "sensor", room: "entree", deviceIds: ["sim-contact-entree"] },
   { name: "Porte-Fenêtre", type: "sensor", room: "sejour", deviceIds: ["sim-contact-sejour"] },
   {
-    name: "Porte Garage Contact",
-    type: "sensor",
+    // Adopted, like the Portail below. The core derives a gate's open/closed from a
+    // `contact_door` reading **on the gate equipment itself** (`deriveGateState`),
+    // so a contact on an equipment of its own left the door at `unknown` for ever.
+    // The real house carried the position on a LoRa reed switch (`RS1`), which the
+    // rewrite drops as generic; the contact is its stand-in, and it has to sit where
+    // the reed switch sat.
+    name: "Porte Garage",
+    type: "gate",
     room: "garage",
     deviceIds: ["sim-contact-garage"],
   },
@@ -76,6 +82,41 @@ export const NEW_EQUIPMENTS: NewEquipment[] = [
     deviceIds: ["sim-appliance-washing-machine"],
   },
   { name: "Simulation", type: "switch", deviceIds: ["sim-house"] },
+  // The WC off the hall: the pavilion's one room the real house lacks. A lamp and
+  // a motion sensor, which is the smallest room that still shows a recipe at work.
+  { name: "Lumière WC", type: "light_onoff", room: "wc", deviceIds: ["sim-relay-wc-1"] },
+  // Rooms the real house never wired a light in, which in a demo reads as a
+  // missing light rather than as a choice: the study, the first child's bedroom
+  // and the bathroom. Named after their room, like the WC's, because equipment ids
+  // are derived from names and three "Lumière" would be one equipment.
+  {
+    name: "Lumière Bureau",
+    type: "light_onoff",
+    room: "bureau",
+    deviceIds: ["sim-relay-bureau-1"],
+  },
+  {
+    name: "Lumière Chambre Enfant 1",
+    type: "light_onoff",
+    room: "chambre-enfant-1",
+    deviceIds: ["sim-relay-chambre-enfant-1-1"],
+  },
+  {
+    name: "Lumière Salle de Bain",
+    type: "light_onoff",
+    room: "salle-de-bain",
+    deviceIds: ["sim-relay-salle-de-bain-1"],
+  },
+  { name: "PIR WC", type: "sensor", room: "wc", deviceIds: ["sim-motion-wc-1"] },
+  {
+    // Adopted: the fixture's gate has a motor relay and nothing that says where
+    // the gate is. The contact is a *new* reading on an existing equipment, which
+    // is what adoption is for — attaching by name only re-points bindings the
+    // fixture already had, and it had none for this.
+    name: "Portail",
+    type: "gate",
+    deviceIds: ["sim-contact-portail"],
+  },
   {
     // The fixture has this equipment and **no bindings at all** behind it — a
     // pool cover nobody ever wired up. It is adopted rather than recreated, so

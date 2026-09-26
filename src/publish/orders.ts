@@ -20,13 +20,16 @@ import type { World } from "../world/world.js";
 import { declare, WEATHER_CONDITIONS } from "./catalogue.js";
 
 /**
- * How long a target stays deaf after an accepted order.
+ * How long a target stays deaf after an accepted order: the "ten hands on one lamp"
+ * rule, which lives here because the core has no demo mode.
  *
- * This is the "ten hands on one lamp" rule, and it lives here because the core
- * has no demo mode. Deliberately short: long enough that a lamp cannot strobe,
- * short enough that a visitor never feels the house ignoring them.
+ * A third of a second, for everything. It used to be three seconds, and that
+ * swallowed a visitor's second click — on then off, +0.5 twice on a thermostat, a
+ * shutter sent down then stopped short of the bottom — so the house felt deaf.
+ * A third of a second still stops a lamp being strobed, and lets any human double
+ * click through. A shutter's STOP is exempt regardless.
  */
-export const DEBOUNCE_MS = 3000;
+export const DEBOUNCE_MS = 300;
 
 const TRUE_VALUES = new Set(["true", "on", "1", "yes", "open"]);
 const FALSE_VALUES = new Set(["false", "off", "0", "no", "close", "closed"]);
@@ -99,7 +102,7 @@ export class OrderRouter {
     // A STOP is exempt: debouncing a stop is how a shutter ends up somewhere
     // nobody asked for.
     const isStop = orderKey === "state" && coerceEnum(value, ["STOP"]) === "STOP";
-    if (!isStop && this.debounced(sourceDeviceId, orderKey, now)) {
+    if (!isStop && this.debounced(device, orderKey, now)) {
       this.options.logger.debug({ sourceDeviceId, orderKey }, "Order debounced");
       return;
     }
@@ -108,8 +111,8 @@ export class OrderRouter {
     if (applied) this.lastAccepted.set(`${sourceDeviceId}:${orderKey}`, now);
   }
 
-  private debounced(sourceDeviceId: string, orderKey: string, now: number): boolean {
-    const last = this.lastAccepted.get(`${sourceDeviceId}:${orderKey}`);
+  private debounced(device: DeviceSpec, orderKey: string, now: number): boolean {
+    const last = this.lastAccepted.get(`${device.id}:${orderKey}`);
     return last !== undefined && now - last < DEBOUNCE_MS;
   }
 

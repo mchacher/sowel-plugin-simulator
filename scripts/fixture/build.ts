@@ -49,6 +49,7 @@ import {
   type RewriteTarget,
   type TableColumns,
 } from "./rewrite.js";
+import { reshape } from "./reshape.js";
 
 const SIMULATOR_MANIFEST = JSON.parse(readFileSync("manifest.json", "utf8")) as {
   version: string;
@@ -68,6 +69,15 @@ function main(argv: string[]): void {
 
   const backup: Backup = readBackup(input);
   const tables = backup.tables;
+
+  // The demo house is a pavilion, not the four-storey real one: see reshape.ts.
+  const reshaped = reshape(tables);
+  process.stdout.write(
+    `reshaped: ${reshaped.droppedZoneIds.length} zone(s) dropped with ` +
+      `${reshaped.droppedEquipmentIds.length} equipment(s) and ` +
+      `${reshaped.droppedRecipeInstances} recipe instance(s); ` +
+      `${Object.keys(reshaped.mergedZoneIds).length} level(s) folded\n`,
+  );
 
   const zones = new Map<string, Zone>(
     (tables.zones as unknown as Zone[]).map((zone) => [zone.id, zone]),
@@ -254,10 +264,10 @@ function main(argv: string[]): void {
   enrolFlexibleLoads(tables);
   addSurplusRecipe(tables);
   uniformColumns(tables);
-  const problems = verify(
-    tables,
-    result.dropped.map((e) => e.id),
-  );
+  const problems = verify(tables, [
+    ...result.dropped.map((e) => e.id),
+    ...reshaped.droppedEquipmentIds,
+  ]);
 
   process.stdout.write(
     `\n${tables.device_data.length} data rows, ${tables.device_orders.length} order rows\n` +

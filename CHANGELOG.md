@@ -4,6 +4,40 @@ All notable changes to this plugin. Versions follow semver; the registry in `mch
 
 ## Unreleased
 
+## v0.3.0
+
+**A pavilion, not a tower.** The demo house is now a ground floor and one storey
+with the garage attached at the side — fourteen rooms instead of sixteen, and the
+cellar and the workshop are gone with their six devices. The real house has four
+levels; drawn in three dimensions that is a tower nobody can read, and the 3D view
+(`sowel-house-3d`) is the drawing of _this_ house. `scripts/fixture/reshape.ts`
+does it to the backup before anything is derived: two zones dropped with
+everything in them, two level zones folded into the one above, the stairwell
+filed under the ground floor. Areas and window orientations in `layout.ts` are
+the plan's, so the physics runs on the rooms a visitor sees.
+
+The device ids of every remaining room are unchanged, and so are the bindings.
+
+**4 kWc, not 6.** Eight 500 W panels on the south slope — the array the 3D view
+draws. Still more than the three deferrable loads together at midday, which is the
+contest the arbiter is there to show.
+
+**Doors that say where they are.** The gate and the garage door each carry a
+contact on their own equipment, which is where the core reads a gate's state from:
+the motor's pulse opens or shuts them, an open gate closes itself after ninety
+seconds, and the car takes the gate when an adult drives in or out.
+
+**A WC, and three lights.** A WC off the hall with a lamp, a motion sensor and the
+motion-light instance the cellar lost. A light in the study, the first child's
+bedroom and the bathroom, where the real house has none. 84 equipments, 21 recipe
+instances.
+
+**A house that answers like hardware.** One debounce window of 300 ms for every
+target — three seconds swallowed a visitor's second click. An order's echo goes out
+at once rather than on the next tick, and a dimmer switched off keeps its level:
+both were letting a motion-light recipe mistake its own orders for a hand on the
+switch.
+
 ## v0.2.0
 
 The first version that simulates anything. Phase 1 of the

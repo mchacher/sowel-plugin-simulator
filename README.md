@@ -12,7 +12,7 @@ Sensors also expose **simulation orders** no real device has — `sim.motion`, `
 
 ## What it publishes
 
-Twelve rooms over two levels, four occupants on weekday and weekend agendas, a pool, and around sixty devices — every one of them an archetype from [`docs/devices.md`](docs/devices.md), which is the contract this plugin implements.
+A pavilion — a ground floor and one storey, the garage attached at the side — with fourteen rooms, five occupants on weekday and weekend agendas, a pool, and around ninety devices — every one of them an archetype from [`docs/devices.md`](docs/devices.md), which is the contract this plugin implements. The 3D view ([`sowel-house-3d`](https://github.com/mchacher/sowel-house-3d)) draws the same rooms at the same sizes; its plan and `src/house/layout.ts` describe one house.
 
 The house is **alive at t = 0**: everything is declared and carries a plausible value within a second of starting, from any moment of any day. It holds no state on disk — the model is reconstructed by integrating from local midnight — so a restart at three in the afternoon gives a house that is at three in the afternoon rather than a cold one, and the day's energy counters stay monotonic across it.
 
@@ -34,7 +34,7 @@ The three are phase 1 of the [project map](https://github.com/mchacher/sowel-sho
 npx tsx scripts/fixture/build.ts ../sowel/docs/fixtures/showroom-fr.zip
 ```
 
-Turns the core's anonymised showroom backup into one this plugin drives — 74 equipments in, 73 devices out, the vendor vocabulary dropped, the bindings re-pointed by category, and the `sim.*` orders bound so something can call them. It fails rather than emitting a fixture that half works. `scripts/analyse-fixture.py` reports what a backup holds in simulator terms without writing anything.
+Turns the core's anonymised showroom backup into one this plugin drives — the house reshaped to the pavilion first (`scripts/fixture/reshape.ts`: the cellar and workshop dropped, the basement and second floor folded away), then 68 equipments in, 67 devices out, the vendor vocabulary dropped, the bindings re-pointed by category, and the `sim.*` orders bound so something can call them. It fails rather than emitting a fixture that half works. `scripts/analyse-fixture.py` reports what a backup holds in simulator terms without writing anything.
 
 ## Development
 
