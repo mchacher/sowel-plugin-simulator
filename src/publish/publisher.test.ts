@@ -20,12 +20,12 @@ function fakeLogger(): Logger {
 
 function harness() {
   const declared: DiscoveredDevice[] = [];
-  const updates: { id: string; payload: Record<string, unknown> }[] = [];
+  const updates: { id: string; payload: Record<string, unknown>; sourceTimestamp?: number }[] = [];
   const statuses: { id: string; status: string }[] = [];
   const deviceManager: DeviceManager = {
     upsertFromDiscovery: (_id, _source, discovered) => declared.push(discovered),
-    updateDeviceData: (_id, sourceDeviceId, payload) =>
-      updates.push({ id: sourceDeviceId, payload }),
+    updateDeviceData: (_id, sourceDeviceId, payload, sourceTimestamp) =>
+      updates.push({ id: sourceDeviceId, payload, sourceTimestamp }),
     updateDeviceStatus: (_id, sourceDeviceId, status) =>
       statuses.push({ id: sourceDeviceId, status }),
     removeStaleDevices: vi.fn(),
@@ -64,6 +64,21 @@ describe("the house is alive at t = 0", () => {
     publisher.declareAll();
     const names = declared.map((d) => d.friendlyName);
     expect(new Set(names).size).toBe(names.length);
+  });
+});
+
+describe("live readings", () => {
+  it("carry no source timestamp, so the core records them as live", () => {
+    // A timestamp tells the core the reading is an aligned historical window, and
+    // the core reads it in seconds. The world's clock is milliseconds: InfluxDB
+    // refused every point as out of range, and the demo accrued no history.
+    const { updates, publisher } = harness();
+    const world = new World(CONFIG, HOUSE);
+    world.warmUp(NOON);
+    publisher.publish(world.advance(NOON), true);
+    publisher.publish(world.advance(NOON + 60_000));
+    expect(updates.length).toBeGreaterThan(0);
+    expect(updates.filter((u) => u.sourceTimestamp !== undefined)).toEqual([]);
   });
 });
 

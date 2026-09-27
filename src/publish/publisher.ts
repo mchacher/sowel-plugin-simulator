@@ -134,12 +134,12 @@ export class Publisher {
       if (!values) continue;
       const payload = this.gate(device.id, values, state.ts, force);
       if (Object.keys(payload).length === 0) continue;
-      this.options.deviceManager.updateDeviceData(
-        this.options.integrationId,
-        device.id,
-        payload,
-        state.ts,
-      );
+      // No source timestamp: these are live readings, and the core treats a
+      // timestamped reading as an aligned historical window — no per-minute energy
+      // accumulation, no dedupe, half-hour tariff windows. It also reads it in
+      // seconds; `state.ts` is milliseconds, so InfluxDB refused every point as
+      // outside its time range and the demo accrued no history at all.
+      this.options.deviceManager.updateDeviceData(this.options.integrationId, device.id, payload);
     }
     this.publishInverterStatus(state);
   }
