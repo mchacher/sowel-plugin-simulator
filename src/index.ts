@@ -16,7 +16,8 @@ import { HOUSE } from "./house/house.js";
 import { OrderRouter } from "./publish/orders.js";
 import { Publisher } from "./publish/publisher.js";
 import { Ticker } from "./world/clock.js";
-import { World } from "./world/world.js";
+import { DEFAULT_SEED, FALLBACK_LOCATION, worldConfigFrom } from "./world/config.js";
+import { World, type WorldConfig } from "./world/world.js";
 import type {
   Device,
   IntegrationPlugin,
@@ -30,15 +31,6 @@ export const INTEGRATION_ID = "simulator";
 
 /** The plugin's heartbeat. Live power is a per-second reading (FR10). */
 const TICK_MS = 1_000;
-
-/**
- * Where the house sits when the instance has not been told. Spec 111 lets a
- * plugin read `home.latitude` / `home.longitude` / `home.timezone`; it does not
- * promise they are set.
- */
-const FALLBACK_LOCATION = { latitude: 48.8566, longitude: 2.3522, timezone: "Europe/Paris" };
-
-const DEFAULT_SEED = 1789;
 
 class SimulatorPlugin implements IntegrationPlugin {
   readonly id = INTEGRATION_ID;
@@ -81,24 +73,18 @@ class SimulatorPlugin implements IntegrationPlugin {
     ];
   }
 
-  private readLocation(): typeof FALLBACK_LOCATION {
-    const latitude = Number(this.deps.settingsManager.get("home.latitude"));
-    const longitude = Number(this.deps.settingsManager.get("home.longitude"));
-    const timezone = this.deps.settingsManager.get("home.timezone");
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || !timezone) {
+  private readConfig(): WorldConfig {
+    const { config, fallbackLocation } = worldConfigFrom(
+      (key) => this.deps.settingsManager.get(key),
+      INTEGRATION_ID,
+    );
+    if (fallbackLocation) {
       this.logger.warn(
         { fallback: FALLBACK_LOCATION },
         "Home location not set — simulating at the fallback location",
       );
-      return FALLBACK_LOCATION;
     }
-    return { latitude, longitude, timezone };
-  }
-
-  private readSeed(): number {
-    const raw = this.deps.settingsManager.get(`integration.${INTEGRATION_ID}.seed`);
-    const seed = Number(raw);
-    return Number.isFinite(seed) && seed !== 0 ? seed : DEFAULT_SEED;
+    return config;
   }
 
   /**
@@ -108,11 +94,11 @@ class SimulatorPlugin implements IntegrationPlugin {
    * house.
    */
   async start(): Promise<void> {
-    const location = this.readLocation();
-    const seed = this.readSeed();
+    const config = this.readConfig();
+    const { seed } = config;
     const now = Date.now();
 
-    this.world = new World({ ...location, seed }, HOUSE);
+    this.world = new World(config, HOUSE);
     this.publisher = new Publisher({
       deviceManager: this.deps.deviceManager,
       logger: this.logger,
@@ -135,7 +121,7 @@ class SimulatorPlugin implements IntegrationPlugin {
     this.ticker.start();
 
     this.status = "connected";
-    this.logger.info({ ...location, seed, devices: HOUSE.devices.length }, "Simulator started");
+    this.logger.info({ ...config, devices: HOUSE.devices.length }, "Simulator started");
   }
 
   /** Never throws: a failed tick is logged and the house carries on (FR13). */

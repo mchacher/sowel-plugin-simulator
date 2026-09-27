@@ -34,10 +34,8 @@ const OFF_PEAK_END = 6 * 60 + 30;
  * load. It did, on a real instance, with the reason `wall-switch-on`.
  *
  * The pool's twelve-day warm-up still needs to guess what happened before the
- * plugin existed, and this is that guess.
+ * plugin existed; that guess is a habit, and lives with the others (`habits.ts`).
  */
-const ASSUMED_PUMP_START = 11 * 60;
-const ASSUMED_PUMP_END = 15 * 60;
 
 export interface ApplianceCycle {
   running: boolean;
@@ -78,10 +76,6 @@ export interface ApplianceInputs {
 
 export function inOffPeak(minutes: number): boolean {
   return minutes >= OFF_PEAK_START || minutes < OFF_PEAK_END;
-}
-
-export function poolPumpAssumedRunning(minutes: number): boolean {
-  return minutes >= ASSUMED_PUMP_START && minutes < ASSUMED_PUMP_END;
 }
 
 export function loadPowers(inputs: ApplianceInputs): Record<LoadId, number> {

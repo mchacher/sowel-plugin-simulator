@@ -22,7 +22,8 @@ import {
   type ActuatorStates,
 } from "./actuators.js";
 import { initialAir, daylightLux, stepAir, type AirState } from "./air.js";
-import { applianceRunning, inOffPeak, loadPowers, poolPumpAssumedRunning } from "./appliances.js";
+import { applianceRunning, inOffPeak, loadPowers } from "./appliances.js";
+import { poolPumpHabit } from "./habits.js";
 import { dayNumber, localMidnight, localParts } from "./clock.js";
 import {
   accumulate,
@@ -269,7 +270,7 @@ export class World {
           solarGainW: poolSolarGainW(this.house.pool, sun, weather.cloudFactor),
           // The warm-up reconstructs a past the plugin was not there for, so the
           // pump's hours are an assumption here and only here.
-          pumpRunning: poolPumpAssumedRunning(localParts(ts, this.config.timezone).minutes),
+          pumpRunning: poolPumpHabit(localParts(ts, this.config.timezone).minutes),
           setpointC: this.actuators.poolSetpointC,
           coverOpenFraction: shutterOpenFraction(this.actuators, POOL_COVER_DEVICE_ID),
         },
