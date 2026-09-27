@@ -29,6 +29,12 @@ describe("production", () => {
     expect(planeOfArrayW(at("2026-07-15T23:30:00Z"), 1)).toBe(0);
   });
 
+  it("is twelve 500 W panels — the array the 3D view draws", () => {
+    // Spec 001, amended 2026-09-26. The 3D app's plan test holds its panel count
+    // against this figure.
+    expect(HOUSE.pv.peakW).toBe(12 * 500);
+  });
+
   it("peaks well below the nameplate on the best day of the year", () => {
     const peak = pvProductionW(HOUSE, at("2026-06-21T11:52:00Z"), 0.97);
     expect(peak).toBeGreaterThan(0.6 * HOUSE.pv.peakW);

@@ -273,9 +273,9 @@ const occupants: Occupant[] = [
 
 /**
  * Sizing is not decoration (spec 001, FR9b). An arbiter with no surplus, or with
- * a surplus smaller than its smallest load, demonstrates nothing: 4 kWc against a
- * 2 400 W water heater and a 750 W pool pump is a real contest at midday, which is
- * the exact scenario core spec 140 was written for.
+ * a surplus smaller than its smallest load, demonstrates nothing. At 6 kWc a clear
+ * midday covers the three deferrable loads together; the contest is in the mornings,
+ * the evenings and the grey days, which is where core spec 140's yo-yo shows.
  */
 
 const loads: LoadSpec[] = [
@@ -320,6 +320,8 @@ export const LAYOUT = {
     heatPumpThermalW: 7000,
   } satisfies PoolSpec,
   // Eight 500 W panels on the south slope of the roof — the ones the 3D view draws.
-  pv: { peakW: 4000, systemLoss: 0.12 },
+  // Twelve 500 W panels on the south slope, the array the 3D view draws (spec 001,
+  // amended 2026-09-26: 4 kWc was weak on the running demo).
+  pv: { peakW: 6000, systemLoss: 0.12 },
   baseLoadW: { night: 250, day: 380, evening: 620 },
 };

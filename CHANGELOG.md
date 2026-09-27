@@ -4,6 +4,15 @@ All notable changes to this plugin. Versions follow semver; the registry in `mch
 
 ## Unreleased
 
+**History, at last.** Live readings no longer carry a source timestamp: the plugin
+passed the world's clock in milliseconds where the core reads seconds, and InfluxDB
+refused every point — the showroom had accrued no history since phase 1. And the grid
+meter's `energy` delta is signed, drawn minus returned (core spec 086), so the core's
+self-consumption split sees what is exported.
+
+**6 kWc.** Twelve 500 W panels, back to the architecture's first sizing; 4 kWc was
+weak on the running demo.
+
 ## v0.3.0
 
 **A pavilion, not a tower.** The demo house is now a ground floor and one storey
