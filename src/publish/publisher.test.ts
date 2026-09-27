@@ -188,9 +188,24 @@ describe("what goes on the wire", () => {
     publisher.publish(world.advance(NOON + 120_000));
     const second = updates.slice(before).find((u) => u.id === "sim-grid")?.payload;
     expect(second?.energy).toBeTypeOf("number");
-    expect(second?.energy as number).toBeGreaterThanOrEqual(0);
     expect(second?.energy_forward as number).toBeGreaterThanOrEqual(
       first?.energy_forward as number,
     );
+  });
+
+  it("signs the grid's energy delta: drawn minus returned (core spec 086)", () => {
+    // A clear July noon exports. Import alone left the core's self-consumption
+    // split with no injection: every exported watt-hour counted as consumed.
+    const { updates, publisher } = harness();
+    publisher.publish(world.advance(NOON), true);
+    const first = updates.find((u) => u.id === "sim-grid")?.payload ?? {};
+    const before = updates.length;
+    publisher.publish(world.advance(NOON + 120_000));
+    const second = updates.slice(before).find((u) => u.id === "sim-grid")?.payload ?? {};
+    const drawn = (second.energy_forward as number) - (first.energy_forward as number);
+    const returned = (second.energy_reverse as number) - (first.energy_reverse as number);
+    expect(returned).toBeGreaterThan(0);
+    expect(second.energy as number).toBeCloseTo(drawn - returned, 0);
+    expect(second.energy as number).toBeLessThan(0);
   });
 });

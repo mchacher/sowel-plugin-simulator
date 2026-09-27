@@ -136,7 +136,9 @@ convention across the whole product: `energy` is the Wh consumed since the previ
 report. Cumulative totals live under `energy_forward` and `energy_reverse`, which are
 monotonic. Publishing a cumulative value under `energy` corrupts every energy page.
 
-On a grid clamp, `power` is signed: negative means export.
+On a grid clamp, `power` is signed: negative means export. So is `energy`: drawn minus
+returned since the previous report (core spec 086), which is what the core's
+self-consumption split reads its injection from.
 
 **`appliance_state` carries exactly two values.** Two real plugins publish four
 (`idle`, `running`, `pause`, `finished`) but the core charts the category as binary and

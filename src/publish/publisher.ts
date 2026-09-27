@@ -323,8 +323,15 @@ export class Publisher {
           current: this.round(Math.abs(gridW) / voltageV, 2),
           energy_forward: this.round(counters.importedWh, 1),
           energy_reverse: this.round(counters.exportedWh, 1),
-          // The delta convention: what was drawn since the previous report.
-          energy: this.round(this.delta(device.id, "energy", counters.importedWh), 2),
+          // The delta convention for a grid meter is signed (core spec 086):
+          // drawn minus returned since the previous report. Import alone left the
+          // core's self-consumption split with no injection, ever — every exported
+          // watt-hour counted as consumed at home.
+          energy: this.round(
+            this.delta(device.id, "energy:import", counters.importedWh) -
+              this.delta(device.id, "energy:export", counters.exportedWh),
+            2,
+          ),
         };
       }
       case "subload_clamp": {
