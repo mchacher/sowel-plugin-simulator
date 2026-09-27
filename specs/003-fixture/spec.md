@@ -343,6 +343,22 @@ they walk in; they should see it go off as they walk out.
 
 The lamp goes off about ten seconds after the figure leaves.
 
+### 2026-09-27 — the second guided journeys
+
+For showroom spec 004's second increment:
+
+- **Timeouts.** The dimmable motion lights (kitchen, living room) go to 5 s like
+  the plain ones: the simulated PIR reports a person continuously, so nobody who
+  stays sees them flicker, and one who leaves sees them go off. The presence
+  heaters go back to eco **30 s** after the room empties. The thermostats keep
+  theirs; the heat pump's presence journey is a later increment.
+- **The radiators' run state.** Each radiator equipment gets a `heating` binding
+  to its device's new `heating` key (spec 001, amended the same day), so the 3D
+  can draw it warm when it heats rather than when its relay is energised.
+- **No secret in the settings.** `history.influx.*` is dropped: legacy keys the
+  core no longer reads, one of them a token, and the showroom now shows its
+  settings to every visitor (showroom spec 001, amended 2026-09-27).
+
 ## The phase 1 gate, walked
 
 On a stock Sowel 1.68.0 in Docker: instance wiped, plugin installed, fixture

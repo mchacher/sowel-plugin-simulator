@@ -293,7 +293,12 @@ function declarationFor(
       };
     case "heater":
       return {
-        data: [{ key: "state", type: "boolean", category: "light_state" }],
+        // `state` is the pilot wire's relay: on = eco, off = comfort. `heating` is
+        // the radiator's run state, published so a viewer can show it warm.
+        data: [
+          { key: "state", type: "boolean", category: "light_state" },
+          { key: "heating", type: "boolean", category: "generic" },
+        ],
         orders: [{ key: "state", type: "boolean", category: "light_toggle" }],
         powerSource: "mains",
       };
