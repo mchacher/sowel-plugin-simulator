@@ -383,3 +383,20 @@ where a real installation has it, and where spec 140's yo-yo shows.
 `layout.ts` carries `peakW: 6000`; its sizing comment says the same. The 3D app's
 test holds its panel count against this figure, as it already holds the room areas
 against this plugin's, so the two cannot drift apart again.
+
+### Amendment — 2026-09-27: a radiator is on a pilot wire
+
+The fixture's electric radiators (the two children's rooms) are driven by the
+`presence-heater` recipe, and that recipe is written for a **pilot wire**: comfort
+releases the relay (`OFF`), eco energises it (`ON`). The simulator modelled the relay
+as the radiator's switch, so a visitor walking into the room had the recipe send
+comfort — and the radiator turned off. Found preparing the showroom's second guided
+journeys (showroom spec 004).
+
+- A radiator's relay is the pilot wire. Released, the radiator heats to its room's
+  setpoint; energised, to that setpoint lowered by **3.5 K**, the usual eco. It is
+  never simply off.
+- **No signal is comfort.** A radiator nothing drives — the history replay, a
+  recipe disabled — keeps its room warm, as a real one does.
+- The heater device publishes `heating`, whether it is emitting, beside `state`, the
+  relay. What a viewer draws warm is the first, not the second.

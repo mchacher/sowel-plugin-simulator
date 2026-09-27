@@ -241,6 +241,22 @@ function main(argv: string[]): void {
     new Map(equipments.map((equipment) => [equipment.name, equipment.id])),
   );
 
+  // ── A radiator's run state, bound where its relay already is ─────────────
+  // The rewrite re-points the bindings the fixture had; `heating` is new (a
+  // pilot-wire radiator's relay says eco or comfort, not whether it is warm), so
+  // it gets a binding of its own on the radiator's equipment.
+  const runStates = targets
+    .filter((target) => target.equipmentId && target.device.archetype === "heater")
+    .map((target) =>
+      shape(columns.dataBindings, {
+        id: stableId(`data-binding:heating:${target.equipmentId}:${target.device.id}`),
+        equipment_id: target.equipmentId,
+        device_data_id: stableId(`data:${target.device.id}:heating`),
+        alias: "heating",
+        historize: null,
+      }),
+    );
+
   // ── The simulation order bindings, on every equipment that can carry one ──
   const simBindings = buildSimulationBindings(
     targets,
@@ -253,7 +269,7 @@ function main(argv: string[]): void {
   tables.devices = rewritten.devices;
   tables.device_data = rewritten.deviceData;
   tables.device_orders = rewritten.deviceOrders;
-  tables.data_bindings = [...rewritten.dataBindings, ...additions.dataBindings];
+  tables.data_bindings = [...rewritten.dataBindings, ...additions.dataBindings, ...runStates];
   tables.order_bindings = [...rewritten.orderBindings, ...additions.orderBindings, ...simBindings];
   tables.equipments = [
     ...equipments.filter((e) => !result.dropped.some((d) => d.id === e.id)),
@@ -376,9 +392,13 @@ function prune(tables: Record<string, Row[]>): void {
       pinned_sha256: null,
     }),
   ];
-  tables.settings = tables.settings.filter(
-    (row) => !String(row.key ?? "").startsWith("integration."),
-  );
+  // `history.influx.*` too: legacy keys the core no longer reads (it takes
+  // InfluxDB from its environment), one of which is a token. The demo shows its
+  // settings to every visitor (showroom spec 001, amended 2026-09-27).
+  tables.settings = tables.settings.filter((row) => {
+    const key = String(row.key ?? "");
+    return !key.startsWith("integration.") && !key.startsWith("history.influx.");
+  });
 }
 
 /**

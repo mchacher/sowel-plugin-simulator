@@ -62,12 +62,21 @@ export const BATHROOM_JOURNEY = {
 } as const;
 
 /**
- * A motion light's timeout in the demo: five seconds. A house wants a minute; a
- * visitor watching the figure walk out of a room wants to see the light go off
- * behind it. Every plain motion-light instance gets it; the dimmable ones, in the
- * living rooms, keep theirs.
+ * The demo's timeouts: what a visitor watching for thirty seconds needs to see
+ * happen, where a house would want minutes (spec 003, amended 2026-09-27).
+ *
+ * - Every motion light, plain and dimmable, goes off five seconds after the room
+ *   empties: the visitor sees it go off behind them. The dimmable ones in the
+ *   living rooms kept ten minutes at first, as rooms one stays in; the simulated
+ *   PIR reports a person continuously, so nothing flickers for one who stays.
+ * - A presence heater goes back to eco thirty seconds after the room empties, so
+ *   "leave the room" is something to watch too.
  */
-export const DEMO_MOTION_LIGHT_TIMEOUT = "5s";
+export const DEMO_TIMEOUTS: Record<string, string> = {
+  "motion-light": "5s",
+  "motion-light-dimmable": "5s",
+  "presence-heater": "30s",
+};
 
 export interface ReshapeReport {
   droppedZoneIds: string[];
@@ -140,9 +149,10 @@ export function reshape(tables: Record<string, Row[]>): ReshapeReport {
   }
 
   for (const row of tables.recipe_instances) {
-    if (row.recipe_id !== "motion-light") continue;
+    const timeout = DEMO_TIMEOUTS[String(row.recipe_id)];
+    if (!timeout) continue;
     const params = JSON.parse(String(row.params)) as Record<string, unknown>;
-    params.timeout = DEMO_MOTION_LIGHT_TIMEOUT;
+    params.timeout = timeout;
     row.params = JSON.stringify(params);
   }
 

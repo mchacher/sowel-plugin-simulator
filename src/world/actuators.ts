@@ -91,7 +91,9 @@ export function initialActuators(house: House): ActuatorStates {
         break;
       }
       case "heater":
-        state.heaters[device.id] = true;
+        // The relay of a pilot wire, released: no signal on a pilot wire is comfort,
+        // so a radiator nothing drives keeps the room warm, as a real one does.
+        state.heaters[device.id] = false;
         break;
       case "gate":
         state.gates[device.id] = false;

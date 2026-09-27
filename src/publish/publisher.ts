@@ -276,7 +276,12 @@ export class Publisher {
         // published `false` for ever, whatever the valve was actually doing.
         return { state: state.actuators.valves[device.id] ?? false, battery };
       case "heater":
-        return { state: state.actuators.heaters[device.id] ?? false };
+        // `state` is the pilot wire's relay (on = eco); `heating` is whether the
+        // radiator is actually emitting, which is what a viewer wants to see warm.
+        return {
+          state: state.actuators.heaters[device.id] ?? false,
+          heating: room ? room.heatingOn : false,
+        };
       case "relay_4ch": {
         const channels = state.actuators.relayChannels[device.id] ?? [];
         const values: Record<string, unknown> = {};

@@ -80,6 +80,8 @@ import { Overrides } from "./overrides.js";
 const WARMUP_STEP_S = 60;
 /** Longest gap we bridge by stepping; beyond it, rebuild from midnight. */
 const MAX_CATCHUP_S = 900;
+/** A pilot-wire radiator's eco: its comfort setpoint lowered by this, kelvin. */
+export const PILOT_WIRE_ECO_K = 3.5;
 /**
  * How long a PIR keeps reporting occupancy after the room empties, seconds. A real
  * one holds about a minute; the demo's visitor watches a light go off behind them,
@@ -558,7 +560,13 @@ export class World {
       return { setpointC: state?.setpointC ?? room.setpointC, enabled: state?.power ?? true };
     }
     if (device?.archetype === "heater") {
-      return { setpointC: room.setpointC, enabled: this.actuators.heaters[device.id] ?? true };
+      // A pilot wire (spec 001, amended 2026-09-27): the relay does not switch the
+      // radiator, it signals its mode. Released is comfort; energised is eco, the
+      // radiator's own setpoint lowered by the standard 3.5 K. The fixture's recipe
+      // is wired that way — comfort sends OFF — and a plain on/off radiator turned
+      // the room cold as the visitor walked in.
+      const eco = this.actuators.heaters[device.id] ?? false;
+      return { setpointC: room.setpointC - (eco ? PILOT_WIRE_ECO_K : 0), enabled: true };
     }
     if (room.heating === "trv") {
       const house = this.actuators.thermostats[this.house.houseThermostatDeviceId];

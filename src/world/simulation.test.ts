@@ -191,3 +191,25 @@ describe("a visitor sends someone home", () => {
     expect(w.advance(tomorrow).occupants.find((o) => o.id === "adulte-1")?.present).toBe(false);
   });
 });
+
+describe("a radiator on a pilot wire (spec 001, amended 2026-09-27)", () => {
+  const WINTER_DAY = Date.parse("2026-01-14T09:00:00Z");
+  const HEATER = "sim-heater-chambre-enfant-2-1";
+
+  function after(hours: number, eco: boolean) {
+    const w = world(WINTER_DAY);
+    w.setHeater(HEATER, eco);
+    let state = w.advance(WINTER_DAY);
+    for (let s = 60; s <= hours * 3600; s += 60) state = w.advance(WINTER_DAY + s * 1000);
+    return state.rooms["chambre-enfant-2"];
+  }
+
+  it("heats to comfort with the relay released, and holds eco with it energised", () => {
+    const comfort = after(24, false);
+    const eco = after(24, true);
+    // Eco is comfort lowered by 3.5 K. A room takes about a day to settle (its
+    // inertia over its losses), so a day apart is where the gap shows.
+    expect(comfort.temperatureC - eco.temperatureC).toBeGreaterThan(2);
+    expect(eco.temperatureC).toBeGreaterThan(13);
+  });
+});

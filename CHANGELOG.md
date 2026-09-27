@@ -2,6 +2,18 @@
 
 All notable changes to this plugin. Versions follow semver; the registry in `mchacher/sowel` carries the SHA256 of each released tarball.
 
+## Unreleased
+
+**A radiator is on a pilot wire.** The fixture's heater recipe releases the relay for
+comfort and energises it for eco; the simulator took the relay for an on/off switch,
+so walking into a child's room turned its radiator off. The relay now signals the
+mode (eco = comfort − 3.5 K, no signal = comfort), and the heater publishes
+`heating`, its run state.
+
+**The demo's timeouts, for the second journeys.** Dimmable motion lights off in 5 s,
+presence heaters back to eco in 30 s; each radiator equipment binds `heating`. The
+fixture no longer carries the legacy `history.influx.*` settings, a token among them.
+
 ## v0.4.1
 
 **A sensor and a recipe in the bathroom.** For the showroom's first guided journey: a
