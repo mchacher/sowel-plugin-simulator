@@ -38,6 +38,7 @@ export function generateHistory(tables: BackupTables, options: GenerateOptions):
     from,
     until: options.until,
     onReading: (r) => writers.reading(r.ts, r.deviceId, r.key, r.value),
+    onStep: (ts) => writers.tick(ts),
   });
   const rawSince = options.rawSince ?? now - RAW_RETENTION_MS + 3_600_000;
   return aggregate(

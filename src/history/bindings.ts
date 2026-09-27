@@ -51,7 +51,15 @@ export interface HistoryBindings {
   production: { equipmentId: string; zoneId: string | null } | null;
   tariff: TariffConfig | null;
   settings: Map<string, string>;
+  /**
+   * Sub-meters with a power reading and no energy one: the core integrates their
+   * power into energy itself (`power-submeter-integrator.ts`), equipment id → zone.
+   */
+  powerOnlySubmeters: Map<string, string | null>;
 }
+
+// Restated from the core's `src/equipments/metering.ts`.
+const NON_SUBMETER_TYPES = new Set(["main_energy_meter", "energy_production_meter", "solar_panel"]);
 
 // Restated from the core's `src/shared/history-defaults.ts`.
 const CATEGORY_DEFAULTS_ON = new Set([
@@ -147,6 +155,29 @@ export function historyBindings(
     return e ? { equipmentId: e.id, zoneId: e.zone_id } : null;
   };
 
+  const perEquipment = new Map<string, { alias: string; category: string; type: string }[]>();
+  for (const binding of tables.data_bindings) {
+    const data = dataById.get(binding.device_data_id);
+    if (!data || !equipments.has(binding.equipment_id)) continue;
+    const list = perEquipment.get(binding.equipment_id) ?? [];
+    list.push({ alias: binding.alias, category: data.category, type: data.type });
+    perEquipment.set(binding.equipment_id, list);
+  }
+  const powerOnlySubmeters = new Map<string, string | null>();
+  for (const [id, bindings] of perEquipment) {
+    const equipment = equipments.get(id);
+    if (!equipment || NON_SUBMETER_TYPES.has(equipment.type)) continue;
+    const isPower = (b: { alias: string; category: string }) =>
+      b.alias === "power" || b.category === "power";
+    const isEnergy = (b: { alias: string; category: string }) =>
+      b.alias === "energy" || b.category === "energy";
+    const metering = bindings.some((b) => (isPower(b) || isEnergy(b)) && b.type === "number");
+    if (equipment.type !== "energy_meter" && !metering) continue;
+    if (bindings.some(isPower) && !bindings.some(isEnergy)) {
+      powerOnlySubmeters.set(id, equipment.zone_id);
+    }
+  }
+
   let tariff: TariffConfig | null = null;
   const rawTariff = settings.get("energy.tariff");
   if (rawTariff) {
@@ -163,5 +194,6 @@ export function historyBindings(
     production: find("energy_production_meter"),
     tariff,
     settings,
+    powerOnlySubmeters,
   };
 }

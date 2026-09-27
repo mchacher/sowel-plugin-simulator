@@ -29,6 +29,9 @@ export interface HistoryPoint {
 const MIN_WRITE_INTERVAL_S = 30;
 const MAX_WRITE_INTERVAL_S = 300;
 const ENERGY_WINDOW_S = 60;
+// Restated from the core's power-submeter integrator.
+const SUBMETER_STALE_S = 600;
+const SUBMETER_MIN_WRITE_WH = 0.001;
 const DEADBAND: Record<string, number> = {
   temperature: 0.2,
   temperature_outdoor: 0.2,
@@ -127,6 +130,11 @@ export class CoreWriters {
   private readonly lastWritten = new Map<string, { value: number; ts: number }>();
   private readonly energy = new Map<string, EnergyBucket>();
   private pair: PairBucket | null = null;
+  /** Power-only sub-meters: the last power seen, and the energy not yet written. */
+  private readonly submeters = new Map<
+    string,
+    { lastAt: number | null; lastW: number | null; currentW: number | null; pendingWh: number }
+  >();
   /** The grid meter's household energy is the self-consumption writer's alone. */
   private readonly gridOwnedElsewhere: boolean;
 
@@ -145,6 +153,12 @@ export class CoreWriters {
 
     for (const meta of series) {
       if (meta.alias === "energy") this.pairEnergy(meta, value, ts);
+      if (
+        (meta.alias === "power" || meta.category === "power") &&
+        this.bindings.powerOnlySubmeters.has(meta.equipmentId)
+      ) {
+        this.integratePower(meta.equipmentId, value, ts);
+      }
       if (!meta.historized) continue;
       if (
         this.gridOwnedElsewhere &&
@@ -166,6 +180,51 @@ export class CoreWriters {
         });
       }
     }
+  }
+
+  /**
+   * A minute has passed: the core's integrator re-reads each power-only
+   * sub-meter's current power and writes what it has accumulated, at the minute.
+   */
+  tick(tsMs: number): void {
+    const ts = Math.floor(tsMs / 1000);
+    const minuteS = Math.floor(ts / 60) * 60;
+    for (const [equipmentId, state] of this.submeters) {
+      if (state.currentW !== null) this.integratePower(equipmentId, state.currentW, ts);
+      if (state.pendingWh < SUBMETER_MIN_WRITE_WH) continue;
+      this.points.push({
+        ts: minuteS,
+        tags: tagsOf(
+          { equipmentId, zoneId: this.bindings.powerOnlySubmeters.get(equipmentId) ?? null },
+          "energy",
+          "energy",
+          "number",
+        ),
+        field: "value_number",
+        value: state.pendingWh,
+      });
+      state.pendingWh = 0;
+    }
+  }
+
+  private integratePower(equipmentId: string, watts: number, ts: number): void {
+    const state = this.submeters.get(equipmentId) ?? {
+      lastAt: null,
+      lastW: null,
+      currentW: null,
+      pendingWh: 0,
+    };
+    const absW = Math.abs(watts);
+    if (state.lastAt !== null && state.lastW !== null) {
+      const dt = ts - state.lastAt;
+      if (dt > 0 && dt <= SUBMETER_STALE_S) {
+        state.pendingWh += (((Math.abs(state.lastW) + absW) / 2) * dt) / 3600;
+      }
+    }
+    state.lastAt = ts;
+    state.lastW = watts;
+    state.currentW = watts;
+    this.submeters.set(equipmentId, state);
   }
 
   /** Flush what is still open and return every raw point, in time order. */

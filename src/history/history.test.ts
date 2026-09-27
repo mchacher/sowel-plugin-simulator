@@ -110,6 +110,25 @@ describe("the core's writers, restated", () => {
     expect(written.length).toBe(2);
   });
 
+  it("integrates a power-only sub-meter's power into energy, a minute at a time", () => {
+    // The core's power-submeter integrator: the heat pump's meter binds power only.
+    const [meter] = [...BINDINGS.powerOnlySubmeters.keys()];
+    expect(meter).toBeDefined();
+    const [key] = [...BINDINGS.byReading.entries()].find(([, s]) =>
+      s.some((m) => m.equipmentId === meter && m.alias === "power"),
+    ) ?? [""];
+    const [deviceId, reading] = key.split("\u0000");
+    const writers = new CoreWriters(BINDINGS, TZ);
+    const t0 = Date.parse("2026-09-20T10:00:00Z");
+    writers.reading(t0, deviceId, reading, 180);
+    for (let i = 1; i <= 10; i++) writers.tick(t0 + i * 60_000);
+    const energy = writers
+      .finish()
+      .filter((p) => p.tags.equipmentId === meter && p.tags.alias === "energy");
+    expect(energy).toHaveLength(10);
+    expect(energy.reduce((sum, p) => sum + p.value, 0)).toBeCloseTo(30);
+  });
+
   it("ignores a reading nothing is bound to", () => {
     const writers = new CoreWriters(BINDINGS, TZ);
     writers.reading(Date.now(), "no-such-device", "energy", 1);

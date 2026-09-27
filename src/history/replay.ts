@@ -41,6 +41,8 @@ export function replay(options: {
   /** Epoch ms, exclusive. */
   until: number;
   onReading: (reading: Reading) => void;
+  /** After each minute's readings. */
+  onStep?: (ts: number) => void;
 }): void {
   const house = options.house ?? HOUSE;
   let now = Math.floor(options.from / STEP_MS) * STEP_MS;
@@ -76,5 +78,6 @@ export function replay(options: {
     publisher.publish(state, first);
     first = false;
     habits.apply(world, state);
+    options.onStep?.(now);
   }
 }
