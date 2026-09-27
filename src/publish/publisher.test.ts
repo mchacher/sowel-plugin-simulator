@@ -20,12 +20,12 @@ function fakeLogger(): Logger {
 
 function harness() {
   const declared: DiscoveredDevice[] = [];
-  const updates: { id: string; payload: Record<string, unknown> }[] = [];
+  const updates: { id: string; payload: Record<string, unknown>; sourceTimestamp?: number }[] = [];
   const statuses: { id: string; status: string }[] = [];
   const deviceManager: DeviceManager = {
     upsertFromDiscovery: (_id, _source, discovered) => declared.push(discovered),
-    updateDeviceData: (_id, sourceDeviceId, payload) =>
-      updates.push({ id: sourceDeviceId, payload }),
+    updateDeviceData: (_id, sourceDeviceId, payload, sourceTimestamp) =>
+      updates.push({ id: sourceDeviceId, payload, sourceTimestamp }),
     updateDeviceStatus: (_id, sourceDeviceId, status) =>
       statuses.push({ id: sourceDeviceId, status }),
     removeStaleDevices: vi.fn(),
@@ -64,6 +64,21 @@ describe("the house is alive at t = 0", () => {
     publisher.declareAll();
     const names = declared.map((d) => d.friendlyName);
     expect(new Set(names).size).toBe(names.length);
+  });
+});
+
+describe("live readings", () => {
+  it("carry no source timestamp, so the core records them as live", () => {
+    // A timestamp tells the core the reading is an aligned historical window, and
+    // the core reads it in seconds. The world's clock is milliseconds: InfluxDB
+    // refused every point as out of range, and the demo accrued no history.
+    const { updates, publisher } = harness();
+    const world = new World(CONFIG, HOUSE);
+    world.warmUp(NOON);
+    publisher.publish(world.advance(NOON), true);
+    publisher.publish(world.advance(NOON + 60_000));
+    expect(updates.length).toBeGreaterThan(0);
+    expect(updates.filter((u) => u.sourceTimestamp !== undefined)).toEqual([]);
   });
 });
 
@@ -173,9 +188,24 @@ describe("what goes on the wire", () => {
     publisher.publish(world.advance(NOON + 120_000));
     const second = updates.slice(before).find((u) => u.id === "sim-grid")?.payload;
     expect(second?.energy).toBeTypeOf("number");
-    expect(second?.energy as number).toBeGreaterThanOrEqual(0);
     expect(second?.energy_forward as number).toBeGreaterThanOrEqual(
       first?.energy_forward as number,
     );
+  });
+
+  it("signs the grid's energy delta: drawn minus returned (core spec 086)", () => {
+    // A clear July noon exports. Import alone left the core's self-consumption
+    // split with no injection: every exported watt-hour counted as consumed.
+    const { updates, publisher } = harness();
+    publisher.publish(world.advance(NOON), true);
+    const first = updates.find((u) => u.id === "sim-grid")?.payload ?? {};
+    const before = updates.length;
+    publisher.publish(world.advance(NOON + 120_000));
+    const second = updates.slice(before).find((u) => u.id === "sim-grid")?.payload ?? {};
+    const drawn = (second.energy_forward as number) - (first.energy_forward as number);
+    const returned = (second.energy_reverse as number) - (first.energy_reverse as number);
+    expect(returned).toBeGreaterThan(0);
+    expect(second.energy as number).toBeCloseTo(drawn - returned, 0);
+    expect(second.energy as number).toBeLessThan(0);
   });
 });
