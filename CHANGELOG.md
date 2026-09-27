@@ -2,7 +2,7 @@
 
 All notable changes to this plugin. Versions follow semver; the registry in `mchacher/sowel` carries the SHA256 of each released tarball.
 
-## Unreleased
+## v0.4.1
 
 **A sensor and a recipe in the bathroom.** For the showroom's first guided journey: a
 visitor walks into the bathroom and a motion-light recipe switches the lamp on,
