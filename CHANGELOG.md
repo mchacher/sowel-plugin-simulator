@@ -4,11 +4,19 @@ All notable changes to this plugin. Versions follow semver; the registry in `mch
 
 ## Unreleased
 
+## v0.4.0
+
 **History, at last.** Live readings no longer carry a source timestamp: the plugin
 passed the world's clock in milliseconds where the core reads seconds, and InfluxDB
 refused every point — the showroom had accrued no history since phase 1. And the grid
 meter's `energy` delta is signed, drawn minus returned (core spec 086), so the core's
 self-consumption split sees what is exported.
+
+**The house's past.** `node dist/history/cli.js` computes thirty days of the house
+as a Sowel backup's history files, from the same model, with habits standing in for
+Sowel's automation, in about six seconds (spec 004). The showroom restores them with
+the fixture, so a visitor opens full charts. A test pins the output against a backup
+a live Sowel exported.
 
 **6 kWc.** Twelve 500 W panels, back to the architecture's first sizing; 4 kWc was
 weak on the running demo.
