@@ -393,7 +393,10 @@ function declarationFor(
           { key: "humidity", type: "number", category: "humidity_outdoor", unit: "%" },
           battery,
         ],
-        orders: [{ key: "sim.weather", type: "enum", enumValues: WEATHER_CONDITIONS }],
+        orders: [
+          { key: "sim.weather", type: "enum", enumValues: WEATHER_CONDITIONS },
+          { key: "sim.cloud", type: "number", min: 10, max: 600, unit: "s" },
+        ],
         powerSource: "battery",
       };
     case "rain_gauge":

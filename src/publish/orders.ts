@@ -219,6 +219,13 @@ export class OrderRouter {
       case "sim.close":
         world.simDoor(device.id, false, now);
         return true;
+      case "sim.cloud": {
+        // A cloud passing over the sun, for this many seconds (spec 002, amended).
+        const seconds = coerceNumber(value, 10, 600);
+        if (seconds === undefined) return this.warnValue(device, orderKey, value);
+        world.simCloud(seconds, now);
+        return true;
+      }
       case "sim.temperature": {
         const temperature = coerceNumber(value, -10, 40);
         if (temperature === undefined) return this.warnValue(device, orderKey, value);

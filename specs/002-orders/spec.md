@@ -220,3 +220,12 @@ application's figure walks out of the house and says so; without this the ghost 
 in the last room until it expired, and the bathroom lamp of the first guided journey
 (showroom spec 004) burned two minutes behind a visitor already in the street. Expiry
 stays, for the visitor who simply closes the tab.
+
+### 2026-09-27 — a cloud passes (FR3)
+
+`sim.cloud` on the outdoor module, a number of seconds (10–600): a cloud passes over
+the sun for that long, drifting in and out over eight seconds, and the beam drops to
+what gets through a thick one. The day's own sky, its condition, wind and rain, are
+untouched, unlike `sim.weather`, which changes the day. For the showroom's live demo
+(its spec 005): a visitor makes a cloud pass in daylight and watches the production
+fall, the house's sky dim, and the solar arbiter react — then everything come back.

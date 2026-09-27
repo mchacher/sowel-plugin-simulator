@@ -4,6 +4,10 @@ All notable changes to this plugin. Versions follow semver; the registry in `mch
 
 ## Unreleased
 
+**A cloud passes.** `sim.cloud` (seconds) shades the sun for a while and gives the day
+its sky back: production, daylight and solar gains dip and return. For the showroom's
+"un nuage passe".
+
 **A radiator is on a pilot wire.** The fixture's heater recipe releases the relay for
 comfort and energises it for eco; the simulator took the relay for an on/off switch,
 so walking into a child's room turned its radiator off. The relay now signals the

@@ -74,7 +74,7 @@ import {
   Transitions,
 } from "./actuation.js";
 import { GHOST_AWAY, Ghosts } from "./ghosts.js";
-import { Overrides } from "./overrides.js";
+import { CLOUD_CLEARNESS, Overrides } from "./overrides.js";
 
 /** Integration step during warm-up and when catching up, seconds. */
 const WARMUP_STEP_S = 60;
@@ -321,7 +321,18 @@ export class World {
 
   private weatherAtTs(ts: number): WeatherState {
     const { timezone, seed } = this.config;
-    return weatherAt(ts, timezone, seed, this.overrides.weatherFor(dayNumber(ts, timezone)));
+    const weather = weatherAt(
+      ts,
+      timezone,
+      seed,
+      this.overrides.weatherFor(dayNumber(ts, timezone)),
+    );
+    const shade = this.overrides.cloudShade(ts);
+    if (shade === 0) return weather;
+    // Under a passing cloud the beam dims towards what gets through a thick one; the
+    // day's condition, wind and rain stay the day's.
+    const under = Math.min(weather.cloudFactor, CLOUD_CLEARNESS);
+    return { ...weather, cloudFactor: weather.cloudFactor + (under - weather.cloudFactor) * shade };
   }
 
   /** The household, with any `sim.enter` / `sim.leave` applied. */
@@ -504,6 +515,11 @@ export class World {
     if (!thermal) return false;
     this.rooms.set(roomId, { ...thermal, temperatureC });
     return true;
+  }
+
+  /** A cloud passes over the sun for `seconds` (spec 002, amended 2026-09-27). */
+  simCloud(seconds: number, now: number): void {
+    this.overrides.passCloud(now, seconds);
   }
 
   simWeather(condition: Condition, now: number): void {

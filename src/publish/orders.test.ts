@@ -123,6 +123,7 @@ describe("every declared order does something", () => {
     }
     expect([...declared].sort()).toEqual([
       "sim.close",
+      "sim.cloud",
       "sim.enter",
       "sim.ghost",
       "sim.leave",

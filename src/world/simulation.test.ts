@@ -213,3 +213,20 @@ describe("a radiator on a pilot wire (spec 001, amended 2026-09-27)", () => {
     expect(eco.temperatureC).toBeGreaterThan(13);
   });
 });
+
+describe("a passing cloud (spec 002, amended 2026-09-27)", () => {
+  const NOON = Date.parse("2026-06-22T11:00:00Z");
+
+  it("dims the production while it passes, then gives the day its sky back", () => {
+    const w = world(NOON);
+    // A clear day: a cloud over a cloudy sky has little left to take.
+    w.simWeather("sunny", NOON);
+    const before = w.advance(NOON).energy.productionW;
+    w.simCloud(60, NOON);
+    const under = w.advance(NOON + 20_000).energy.productionW;
+    const after = w.advance(NOON + 90_000).energy.productionW;
+    expect(before).toBeGreaterThan(1000);
+    expect(under).toBeLessThan(before * 0.5);
+    expect(after).toBeGreaterThan(before * 0.8);
+  });
+});

@@ -12,6 +12,11 @@
 
 import type { Condition } from "./weather.js";
 
+/** A passing cloud's leading and trailing edge, milliseconds. */
+export const CLOUD_EDGE_MS = 8_000;
+/** Under the cloud, this much of the beam still gets through. */
+export const CLOUD_CLEARNESS = 0.18;
+
 /** How long a `sim.motion` pulse keeps a sensor reporting. */
 export const MOTION_PULSE_MS = 45_000;
 /** How long `sim.open` holds a door open. */
@@ -21,6 +26,7 @@ export class Overrides {
   private readonly motionUntil = new Map<string, number>();
   private readonly doorUntil = new Map<string, number>();
   private forcedWeather: { condition: Condition; day: number } | undefined;
+  private cloud: { from: number; until: number } | undefined;
   private readonly occupants = new Map<string, { present: boolean; day: number }>();
 
   // — motion ————————————————————————————————————————————————
@@ -58,6 +64,24 @@ export class Overrides {
 
   forceWeather(condition: Condition, day: number): void {
     this.forcedWeather = { condition, day };
+  }
+
+  /**
+   * A cloud passing over the sun (spec 002, amended 2026-09-27): for `seconds`, then
+   * gone. Unlike `forceWeather`, the day's sky is untouched — the showroom's visitor
+   * watches the production drop and come back, not a changed day.
+   */
+  passCloud(now: number, seconds: number): void {
+    this.cloud = { from: now, until: now + seconds * 1000 };
+  }
+
+  /** How much the passing cloud shades the sun now: 0 clear of it, 1 right under it. */
+  cloudShade(ts: number): number {
+    const cloud = this.cloud;
+    if (!cloud || ts < cloud.from || ts >= cloud.until) return 0;
+    // It drifts in and out over a few seconds rather than switching the sun off.
+    const edge = CLOUD_EDGE_MS;
+    return Math.min(1, (ts - cloud.from) / edge, (cloud.until - ts) / edge);
   }
 
   /** The forced sky for that local day, if a visitor asked for one. */
