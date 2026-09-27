@@ -314,6 +314,20 @@ derived from names and three "Lumière" would be one equipment.
 
 The fixture now holds 19 zones, 92 devices, 84 equipments and 21 recipe instances.
 
+### 2026-09-27 — a sensor and a recipe in the bathroom
+
+Showroom spec 004 starts its guided journeys with the visitor walking into the
+bathroom: the light comes on because a recipe saw them, **whatever the time of day**.
+The bathroom has a lamp (the 2026-09-26 amendment) and no sensor. It gets:
+
+- a motion sensor, `sim-motion-salle-de-bain-1`, and its equipment, "PIR Salle de
+  Bain", as the WC's;
+- a `motion-light` instance on the bathroom: its lamp, a one-minute timeout, no
+  luminosity threshold, not disabled by daylight, ten minutes at most.
+
+A visitor's ghost in the bathroom (spec 002, FR4) is then seen by the sensor, and the
+recipe does the rest. The fixture holds 22 recipe instances.
+
 ## The phase 1 gate, walked
 
 On a stock Sowel 1.68.0 in Docker: instance wiped, plugin installed, fixture
