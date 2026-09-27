@@ -307,7 +307,7 @@ relay the plugin already publishes.
 
 This shrinks the arbiter's largest deferrable load from 2 400 W to 600 W, so
 **AC7c is re-read rather than failed**: the surplus has to exceed the largest
-flexible load, and at 4 kWc (eight 500 W panels, amended 2026-09-11 to match the roof the 3D view draws) it still exceeds all three deferrable ones together. The contest the
+flexible load, and at 6 kWc (twelve 500 W panels — see the 2026-09-26 amendment) it exceeds all three deferrable ones together. The contest the
 arbiter arbitrates is now the pool heat pump (1 500 W), the pool pump (750 W) and
 the tank (600 W) — 2 850 W against a midday surplus above 4 kW. Still a contest,
 and a truer one.
@@ -361,3 +361,23 @@ because that half of the analogy was right.
 The assumption survives in one place, renamed to say so: the pool's twelve-day
 warm-up reconstructs a past the plugin was not there for and has to guess when the
 pump ran. A guess about history is not a schedule.
+
+### Amendment — 2026-09-26: back to 6 kWc
+
+The pavilion amendment of 2026-09-11 cut the array to 4 kWc, eight 500 W panels, to
+match the roof the 3D view drew. On the running demo the owner found the production
+weak, and it is: 4 kWc on a hazy autumn day barely clears the house's own base load,
+and the arbiter then has almost nothing to hand out.
+
+The array goes back to **6 kWc — twelve 500 W panels**, the figure the architecture
+chose in the first place (`architecture.md`, sizing), and the 3D view draws twelve,
+two rows of six on the south slope (sowel-house-3d spec 002, amended the same day).
+
+What it changes for the arbiter: a clear midday now exceeds the three deferrable
+loads together (2 850 W), so at the top of a sunny day all three can be granted at
+once. The contest moves to the mornings, the evenings and the grey days — which is
+where a real installation has it, and where spec 140's yo-yo shows.
+
+`layout.ts` carries `peakW: 6000`; its sizing comment says the same. The 3D app's
+test holds its panel count against this figure, as it already holds the room areas
+against this plugin's, so the two cannot drift apart again.

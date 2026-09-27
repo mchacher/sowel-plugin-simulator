@@ -10,7 +10,8 @@ import {
   pvProductionW,
 } from "./energy.js";
 import { sunPosition } from "./sun.js";
-import { inOffPeak, poolPumpAssumedRunning } from "./appliances.js";
+import { inOffPeak } from "./appliances.js";
+import { poolPumpHabit } from "./habits.js";
 import {
   boostStorageWh,
   initialWaterHeaterState,
@@ -27,6 +28,12 @@ describe("production", () => {
   it("is zero at night, whatever the sky says", () => {
     expect(pvProductionW(HOUSE, at("2026-07-15T23:30:00Z"), 1)).toBe(0);
     expect(planeOfArrayW(at("2026-07-15T23:30:00Z"), 1)).toBe(0);
+  });
+
+  it("is twelve 500 W panels — the array the 3D view draws", () => {
+    // Spec 001, amended 2026-09-26. The 3D app's plan test holds its panel count
+    // against this figure.
+    expect(HOUSE.pv.peakW).toBe(12 * 500);
   });
 
   it("peaks well below the nameplate on the best day of the year", () => {
@@ -208,8 +215,8 @@ describe("the thermodynamic tank", () => {
     // a past the plugin was not there for. It is not a timer the plugin obeys:
     // the pump's hours belong to a recipe, and a load running without a grant
     // looks to the energy arbiter exactly like a hand on a wall switch.
-    expect(poolPumpAssumedRunning(12 * 60)).toBe(true);
-    expect(poolPumpAssumedRunning(6 * 60)).toBe(false);
-    expect(poolPumpAssumedRunning(20 * 60)).toBe(false);
+    expect(poolPumpHabit(12 * 60)).toBe(true);
+    expect(poolPumpHabit(6 * 60)).toBe(false);
+    expect(poolPumpHabit(20 * 60)).toBe(false);
   });
 });

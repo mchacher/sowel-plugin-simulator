@@ -33,7 +33,7 @@ The core repo is expected as a sibling directory (`../sowel`) for cross-referenc
 - **Spec 111 isolation**: this plugin can only write devices whose `integrationId === "simulator"`, read settings under `integration.simulator.*` plus `home.latitude/longitude/timezone`, and emit only `system.integration.*` / `system.alarm.*` events. Do not fight the Proxy; design within it.
 - **Never throw** from a handler or from `executeOrder`. Log with `{ err }` and degrade.
 - **Per-target debounce** lives here: an order on a target that changed less than a third of a second ago is ignored (and logged at debug). Anti-strobe only — three seconds swallowed visitors' second clicks.
-- **No InfluxDB writes, no backfill.** Not possible from a plugin, and not wanted.
+- **No InfluxDB writes from the plugin.** Live, it publishes readings and nothing else. The house's past is computed offline by `dist/history/cli.js` (spec 004) as a Sowel backup's history files, which the core's restore writes; the plugin at runtime never backfills.
 
 ## Tech
 
