@@ -190,7 +190,8 @@ One.
 
 ### The recipe timeouts
 
-The map's own open question 1. Twenty-one recipe instances carry production
+The map's own open question 1 — settled for the motion lights on 2026-09-27 (see the
+amendment), open for the rest. Twenty-one recipe instances carry production
 timeouts — a motion light that holds for ten minutes is right in a house and far
 too slow in a demo where a visitor watches for thirty seconds. Shortening them is
 a tuning pass over the fixture, and which ones to shorten is a judgement about
@@ -327,6 +328,20 @@ The bathroom has a lamp (the 2026-09-26 amendment) and no sensor. It gets:
 
 A visitor's ghost in the bathroom (spec 002, FR4) is then seen by the sensor, and the
 recipe does the rest. The fixture holds 22 recipe instances.
+
+### 2026-09-27 — the motion lights go off in five seconds
+
+Settles the open question on recipe timeouts, for the motion lights. Walking the
+bathroom journey, the lamp stayed on a good two minutes after the figure had left: a
+minute of PIR hold, then the recipe's minute. A visitor watches the light come on as
+they walk in; they should see it go off as they walk out.
+
+- Every plain `motion-light` instance — hall, stairs, WC, garage, bathroom — times
+  out after **5 s**. The dimmable ones in the kitchen and the living room keep their
+  ten minutes: those are rooms one stays in.
+- The simulated PIR clears 5 s after the room empties (spec 001, FR7, amended).
+
+The lamp goes off about ten seconds after the figure leaves.
 
 ## The phase 1 gate, walked
 

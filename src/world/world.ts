@@ -73,15 +73,20 @@ import {
   SHUTTER_RATE_PCT_PER_S,
   Transitions,
 } from "./actuation.js";
-import { Ghosts } from "./ghosts.js";
+import { GHOST_AWAY, Ghosts } from "./ghosts.js";
 import { Overrides } from "./overrides.js";
 
 /** Integration step during warm-up and when catching up, seconds. */
 const WARMUP_STEP_S = 60;
 /** Longest gap we bridge by stepping; beyond it, rebuild from midnight. */
 const MAX_CATCHUP_S = 900;
-/** How long a PIR keeps reporting occupancy after the room empties, seconds. */
-const MOTION_HOLD_S = 60;
+/**
+ * How long a PIR keeps reporting occupancy after the room empties, seconds. A real
+ * one holds about a minute; the demo's visitor watches a light go off behind them,
+ * and a minute of it on in an empty room read as the house not noticing (amended
+ * 2026-09-27).
+ */
+const MOTION_HOLD_S = 5;
 /** How long a door stays open when someone goes through it, seconds. */
 const DOOR_OPEN_S = 9;
 /** How long a gate stays open after its motor is pulsed, before it closes itself. */
@@ -511,6 +516,10 @@ export class World {
   }
 
   simGhost(id: string, room: string, now: number): boolean {
+    if (room === GHOST_AWAY) {
+      this.ghosts.remove(id);
+      return true;
+    }
     return this.ghosts.place(id, room, now, this.roomIds);
   }
 

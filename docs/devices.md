@@ -211,7 +211,7 @@ order path — bindings, aliases, audit log and WebSocket all apply unchanged.
 | `sim.temperature`         | probes, thermostats | number, −10 to 40 °C       | Nudges the room and lets the thermal model bring it back.     |
 | `sim.weather`             | the outdoor module  | enum, the conditions above | Forces the sky for the rest of the local day.                 |
 | `sim.enter` / `sim.leave` | occupants           | trigger                    | Sends a household member home or out.                         |
-| `sim.ghost`               | `sim-house`         | `room` or `id:room`        | Places or moves an ephemeral visitor.                         |
+| `sim.ghost`               | `sim-house`         | `room` or `id:room`        | Places or moves an ephemeral visitor; `away` removes it.      |
 
 **They carry no category, deliberately.** A category is what every core consumer
 keys off, and these are none of the categories the core knows; giving them one

@@ -53,13 +53,21 @@ export const BATHROOM_JOURNEY = {
   zone: "Salle de Bain",
   light: "Lumière Salle de Bain",
   params: {
-    timeout: "1m",
+    timeout: "5s",
     luxThreshold: "",
     maxOnDuration: "10m",
     buttons: "",
     disableWhenDaylight: false,
   },
 } as const;
+
+/**
+ * A motion light's timeout in the demo: five seconds. A house wants a minute; a
+ * visitor watching the figure walk out of a room wants to see the light go off
+ * behind it. Every plain motion-light instance gets it; the dimmable ones, in the
+ * living rooms, keep theirs.
+ */
+export const DEMO_MOTION_LIGHT_TIMEOUT = "5s";
 
 export interface ReshapeReport {
   droppedZoneIds: string[];
@@ -129,6 +137,13 @@ export function reshape(tables: Record<string, Row[]>): ReshapeReport {
       }),
       enabled: 1,
     });
+  }
+
+  for (const row of tables.recipe_instances) {
+    if (row.recipe_id !== "motion-light") continue;
+    const params = JSON.parse(String(row.params)) as Record<string, unknown>;
+    params.timeout = DEMO_MOTION_LIGHT_TIMEOUT;
+    row.params = JSON.stringify(params);
   }
 
   // A recipe instance is a JSON blob naming zones and equipments; one that names

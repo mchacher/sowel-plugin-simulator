@@ -8,7 +8,7 @@ Uses:
 - documentation screenshots, which need a live instance rather than an inert fixture;
 - testing recipes and engines without hardware.
 
-Sensors also expose **simulation orders** no real device has — `sim.motion`, `sim.open` / `sim.close`, `sim.temperature`, `sim.weather`, `sim.enter` / `sim.leave`, `sim.ghost` — so a client triggers presence in a room through the ordinary order path, with bindings, the audit log and the WebSocket all applying unchanged. A visitor's presence is a **ghost**: it counts as a person for motion, CO₂ and warmth, and expires two minutes after their last click.
+Sensors also expose **simulation orders** no real device has — `sim.motion`, `sim.open` / `sim.close`, `sim.temperature`, `sim.weather`, `sim.enter` / `sim.leave`, `sim.ghost` — so a client triggers presence in a room through the ordinary order path, with bindings, the audit log and the WebSocket all applying unchanged. A visitor's presence is a **ghost**: it counts as a person for motion, CO₂ and warmth, leaves when sent `away`, and expires two minutes after their last click.
 
 ## What it publishes
 

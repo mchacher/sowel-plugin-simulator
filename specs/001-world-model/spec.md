@@ -126,7 +126,9 @@ that PIR fires because an occupant is in that room. Occupant devices are publish
 well, for the 3D application and for debugging, under the `generic` category.
 
 A PIR reports occupancy while a room is occupied, and clears it after a hold time
-once the room empties, like a real one.
+once the room empties, like a real one — a short one, 5 s (amended 2026-09-27): a
+real PIR holds about a minute, and a visitor waiting that long for a light to go off
+behind them reads it as the house not noticing.
 
 ### FR8 — Air quality follows occupation
 
