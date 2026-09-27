@@ -4,6 +4,15 @@ All notable changes to this plugin. Versions follow semver; the registry in `mch
 
 ## Unreleased
 
+**A sensor and a recipe in the bathroom.** For the showroom's first guided journey: a
+visitor walks into the bathroom and a motion-light recipe switches the lamp on,
+whatever the time of day. 85 equipments, 22 recipe instances.
+
+**Motion lights go off in seconds.** The plain motion-light instances time out after
+5 s, and the simulated PIR clears 5 s after a room empties: a visitor sees the lamp go
+off behind them instead of two minutes later. A ghost sent `away` leaves at once
+instead of lingering in its last room until it expires.
+
 ## v0.4.0
 
 **History, at last.** Live readings no longer carry a source timestamp: the plugin

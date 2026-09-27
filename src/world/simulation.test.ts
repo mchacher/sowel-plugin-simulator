@@ -64,6 +64,18 @@ describe("a visitor makes presence", () => {
     expect(w.advance(EMPTY_HOUSE + GHOST_TTL_MS + 1000).ghostCount).toBe(0);
   });
 
+  it("lets a ghost walk out of the house, and the room empties at once", () => {
+    const w = world();
+    w.simGhost("visitor", "salle-de-bain", EMPTY_HOUSE);
+    expect(w.advance(EMPTY_HOUSE + 1000).ghostCount).toBe(1);
+    expect(w.simGhost("visitor", "away", EMPTY_HOUSE + 2000)).toBe(true);
+    const state = w.advance(EMPTY_HOUSE + 3000);
+    expect(state.ghostCount).toBe(0);
+    expect(state.rooms["salle-de-bain"].occupants).toBe(0);
+    // The PIR holds five seconds, then clears (spec 001, FR7, amended).
+    expect(w.advance(EMPTY_HOUSE + 8000).rooms["salle-de-bain"].occupied).toBe(false);
+  });
+
   it("refuses a room the house does not have", () => {
     const w = world();
     expect(w.simGhost("visitor", "donjon", EMPTY_HOUSE)).toBe(false);

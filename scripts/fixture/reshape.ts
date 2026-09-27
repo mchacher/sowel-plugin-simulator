@@ -44,6 +44,31 @@ export const MOVED_ZONES: Record<string, string> = { Escalier: "RDC" };
 export const ADDED_ROOM = { name: "WC", parent: "RDC", movesRecipeFrom: "Cave" } as const;
 export const WC_LIGHT_EQUIPMENT = "Lumière WC";
 
+/**
+ * The bathroom's motion light, for the first guided journey (showroom spec 004): a
+ * visitor walks in and the lamp comes on whatever the time of day — no luminosity
+ * threshold, not disabled by daylight. A new instance, cloned from the WC's.
+ */
+export const BATHROOM_JOURNEY = {
+  zone: "Salle de Bain",
+  light: "Lumière Salle de Bain",
+  params: {
+    timeout: "5s",
+    luxThreshold: "",
+    maxOnDuration: "10m",
+    buttons: "",
+    disableWhenDaylight: false,
+  },
+} as const;
+
+/**
+ * A motion light's timeout in the demo: five seconds. A house wants a minute; a
+ * visitor watching the figure walk out of a room wants to see the light go off
+ * behind it. Every plain motion-light instance gets it; the dimmable ones, in the
+ * living rooms, keep theirs.
+ */
+export const DEMO_MOTION_LIGHT_TIMEOUT = "5s";
+
 export interface ReshapeReport {
   droppedZoneIds: string[];
   droppedEquipmentIds: string[];
@@ -99,6 +124,26 @@ export function reshape(tables: Record<string, Row[]>): ReshapeReport {
     params.zone = wcZoneId;
     params.lights = [stableId(`equipment:${WC_LIGHT_EQUIPMENT}`)];
     moved.params = JSON.stringify(params);
+
+    const bathroom = JSON.parse(String(moved.params)) as Record<string, unknown>;
+    tables.recipe_instances.push({
+      ...moved,
+      id: stableId(`recipe:motion-light:${BATHROOM_JOURNEY.zone}`),
+      params: JSON.stringify({
+        ...bathroom,
+        ...BATHROOM_JOURNEY.params,
+        zone: idByName(tables, BATHROOM_JOURNEY.zone),
+        lights: [stableId(`equipment:${BATHROOM_JOURNEY.light}`)],
+      }),
+      enabled: 1,
+    });
+  }
+
+  for (const row of tables.recipe_instances) {
+    if (row.recipe_id !== "motion-light") continue;
+    const params = JSON.parse(String(row.params)) as Record<string, unknown>;
+    params.timeout = DEMO_MOTION_LIGHT_TIMEOUT;
+    row.params = JSON.stringify(params);
   }
 
   // A recipe instance is a JSON blob naming zones and equipments; one that names

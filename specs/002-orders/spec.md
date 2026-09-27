@@ -212,3 +212,11 @@ comes back to it — or to full, for a lamp that never had one.
 The recipes have the fragility too — no grace after their own switch-on, none on
 brightness after their own switch-off — and that belongs in their repositories
 (`sowel-recipe-motion-light-dimmable#5`, `sowel-recipe-motion-light#6`).
+
+### 2026-09-27 — a ghost can walk out (FR4)
+
+`sim.ghost` with the room `away` — `v7:away` — removes that ghost at once. The 3D
+application's figure walks out of the house and says so; without this the ghost stayed
+in the last room until it expired, and the bathroom lamp of the first guided journey
+(showroom spec 004) burned two minutes behind a visitor already in the street. Expiry
+stays, for the visitor who simply closes the tab.

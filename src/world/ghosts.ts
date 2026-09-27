@@ -14,6 +14,8 @@
 export const GHOST_TTL_MS = 120_000;
 /** How many may exist at once. */
 export const GHOST_LIMIT = 10;
+/** The room a ghost is sent to when its visitor walks out of the house: it goes. */
+export const GHOST_AWAY = "away";
 
 export interface Ghost {
   id: string;
@@ -53,6 +55,11 @@ export class Ghosts {
     }
     this.ghosts.set(id, { id, room, lastSeenAt: now });
     return true;
+  }
+
+  /** A visitor who walked out: the ghost goes now, not two minutes later. */
+  remove(id: string): void {
+    this.ghosts.delete(id);
   }
 
   expire(now: number): void {

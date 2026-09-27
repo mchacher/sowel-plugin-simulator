@@ -1,6 +1,6 @@
 # Spec 004 — The house's past
 
-**Status**: 📝 Draft, for review. Serves showroom spec 003 (_a house with a past_).
+**Status**: ✅ Implemented (0.4.0). Serves showroom spec 003 (_a house with a past_).
 
 ## Context
 
