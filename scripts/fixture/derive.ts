@@ -227,6 +227,8 @@ export function additionalDevices(occupantIds: readonly string[]): DeviceSpec[] 
     { id: "sim-relay-bureau-1", archetype: "relay", room: "bureau" },
     { id: "sim-relay-chambre-enfant-1-1", archetype: "relay", room: "chambre-enfant-1" },
     { id: "sim-relay-salle-de-bain-1", archetype: "relay", room: "salle-de-bain" },
+    // Showroom spec 004: the visitor walks into the bathroom and a recipe sees them.
+    { id: "sim-motion-salle-de-bain-1", archetype: "motion", room: "salle-de-bain" },
     { id: "sim-motion-wc-1", archetype: "motion", room: "wc" },
 
     { id: "sim-relay-water-heater", archetype: "relay", load: "water-heater" },

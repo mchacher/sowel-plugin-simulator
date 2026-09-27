@@ -56,6 +56,7 @@ export const GENERATED_DEVICES: DeviceSpec[] = [
   { id: "sim-motion-lux-chambre-enfant-3-1", archetype: "motion_lux", room: "chambre-enfant-3" },
   { id: "sim-motion-lux-cuisine-1", archetype: "motion_lux", room: "cuisine" },
   { id: "sim-motion-lux-sejour-1", archetype: "motion_lux", room: "sejour" },
+  { id: "sim-motion-salle-de-bain-1", archetype: "motion", room: "salle-de-bain" },
   { id: "sim-motion-sejour-1", archetype: "motion", room: "sejour" },
   { id: "sim-motion-sejour-2", archetype: "motion", room: "sejour" },
   { id: "sim-motion-wc-1", archetype: "motion", room: "wc" },

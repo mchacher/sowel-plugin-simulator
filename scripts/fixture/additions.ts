@@ -108,6 +108,13 @@ export const NEW_EQUIPMENTS: NewEquipment[] = [
     deviceIds: ["sim-relay-salle-de-bain-1"],
   },
   { name: "PIR WC", type: "sensor", room: "wc", deviceIds: ["sim-motion-wc-1"] },
+  // The bathroom's, for the first guided journey (showroom spec 004).
+  {
+    name: "PIR Salle de Bain",
+    type: "sensor",
+    room: "salle-de-bain",
+    deviceIds: ["sim-motion-salle-de-bain-1"],
+  },
   {
     // Adopted: the fixture's gate has a motor relay and nothing that says where
     // the gate is. The contact is a *new* reading on an existing equipment, which
