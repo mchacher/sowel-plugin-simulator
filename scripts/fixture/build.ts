@@ -278,6 +278,7 @@ function main(argv: string[]): void {
 
   prune(tables);
   enrolFlexibleLoads(tables);
+  armPoolOnSurplus(tables);
   addSurplusRecipe(tables);
   uniformColumns(tables);
   const problems = verify(tables, [
@@ -419,6 +420,73 @@ function prune(tables: Record<string, Row[]>): void {
  * pump — declaring one would have the arbiter grant capacity for behaviour the
  * model does not exhibit.
  */
+/**
+ * The pool, on the arbiter (spec 003, amended 2026-09-28).
+ *
+ * Enrolling the pump and the heat pump gave them profiles, but nothing claimed them:
+ * the fixture's `pool-pump-schedule` instance was exported in May with fixed windows
+ * only, before the recipe learnt to run on surplus. So the pump ran its 14:34–17:04
+ * window on the grid, the heat pump heated to its 27 °C whenever the pump ran, and
+ * the arbiter showed both "running outside arbitration" (owner, on the demo).
+ *
+ * The recipe now does it properly: the pump on surplus by day through the arbiter,
+ * the heat pump driven through its setpoint on surplus and held at 10 °C otherwise,
+ * so it never heats on the grid. No fixed window: a daily filtration target from the
+ * water's temperature (at most six hours), nothing forced by day, and what the sun
+ * did not provide caught up at night — the one time the pump runs outside the
+ * arbiter, as a real pool's would. (A water sensor is what the recipe needs to heat,
+ * and a sensor turns the target on; the 00:04–04:04 window first kept here was
+ * ignored by its catch-up, which would have started on the grid in the evening.)
+ */
+function armPoolOnSurplus(tables: Record<string, Row[]>): void {
+  const heater = tables.equipments.find((row) => row.name === "PAC Piscine");
+  const instance = tables.recipe_instances.find((row) => row.recipe_id === "pool-pump-schedule");
+  if (!heater || !instance) fail("cannot arm the pool on surplus: no pool recipe or heat pump");
+  const params = JSON.parse(String(instance.params)) as Record<string, unknown>;
+  Object.assign(params, {
+    runOnSurplus: true,
+    heater: heater.id,
+    heatingTargetTemp: "28",
+    heaterIdleSetpoint: "10",
+    // The heat pump reads the water: the recipe needs it to heat, and it turns on the
+    // daily filtration target — capped at six hours, none of it forced by day, the
+    // rest caught up at night if the sun did not provide it.
+    waterTempSensor: heater.id,
+    maxFiltrationHours: "6",
+    minFiltrationHours: "2",
+    filtrationRefTemp: "30",
+    daytimeMinHours: "0",
+    slot1_start: "",
+    slot1_end: "",
+    slot2_start: "",
+    slot2_end: "",
+    slot3_start: "",
+    slot3_end: "",
+  });
+  instance.params = JSON.stringify(params);
+
+  // The tariff the fixture carries is the owner's own, with an afternoon off-peak
+  // window (14:34–17:04), and the recipe runs the pump on the grid in off-peak hours
+  // until its target is met — exactly when visitors look. The demo's house has the
+  // usual single night window: by day, the pool runs on the sun or not at all.
+  const tariff = tables.settings.find((row) => row.key === "energy.tariff");
+  if (tariff) {
+    const value = JSON.parse(String(tariff.value)) as { prices?: unknown };
+    tariff.value = JSON.stringify({
+      ...value,
+      schedules: [
+        {
+          days: [0, 1, 2, 3, 4, 5, 6],
+          slots: [
+            { start: "22:00", end: "06:00", tariff: "hc" },
+            { start: "06:00", end: "22:00", tariff: "hp" },
+          ],
+        },
+      ],
+    });
+  }
+}
+
 function enrolFlexibleLoads(tables: Record<string, Row[]>): void {
   // Order matters: the list is read top-down to grant and bottom-up to revoke.
   // The water heater first, because the seven kelvin it stores are the only

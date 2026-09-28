@@ -4,6 +4,12 @@ All notable changes to this plugin. Versions follow semver; the registry in `mch
 
 ## Unreleased
 
+**The pool, on the arbiter.** The fixture's pool recipe ran fixed windows on the grid
+and left the heat pump heating on its own: both showed "outside arbitration". It now
+runs the pump on surplus, the heat pump through its setpoint on surplus (10 °C
+otherwise), a six-hour filtration target caught up at night, and the demo's tariff
+has a single night off-peak window.
+
 **A radiator is on a pilot wire.** The fixture's heater recipe releases the relay for
 comfort and energises it for eco; the simulator took the relay for an on/off switch,
 so walking into a child's room turned its radiator off. The relay now signals the
