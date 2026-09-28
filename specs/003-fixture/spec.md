@@ -359,6 +359,29 @@ For showroom spec 004's second increment:
   core no longer reads, one of them a token, and the showroom now shows its
   settings to every visitor (showroom spec 001, amended 2026-09-27).
 
+### 2026-09-28 — the pool, on the arbiter
+
+The owner, on the demo: the pool pump and its heat pump always ran "outside
+arbitration". Enrolling them (2026-09-09) gave them profiles, but nothing claimed them:
+the fixture's `pool-pump-schedule` instance was exported in May with two fixed windows,
+before the recipe learnt to run on surplus. The pump ran its windows on the grid; the
+heat pump heated to its own 27 °C whenever the pump ran.
+
+- The instance runs **on surplus** through the arbiter, and drives the heat pump
+  through its setpoint: 28 °C while the arbiter grants surplus, **10 °C** otherwise, so
+  it never heats on the grid.
+- The heat pump reads the water, which the recipe needs to heat; that turns on its
+  daily filtration target, capped at **six hours**, **none of it forced by day**; what
+  the sun did not provide is caught up at night — the one time the pump runs outside
+  the arbiter, as a real pool's would. No fixed window.
+- **The demo's tariff** is the usual single night off-peak window, 22:00–06:00: the
+  fixture carried the owner's own, with an afternoon off-peak window, and the recipe
+  runs the pump on the grid in off-peak hours until its target is met — exactly when
+  visitors look.
+
+Walked: the pump claims and waits for surplus (`pending`), the heat pump rests at
+10 °C (`idle`); nothing runs outside the arbiter by day.
+
 ## The phase 1 gate, walked
 
 On a stock Sowel 1.68.0 in Docker: instance wiped, plugin installed, fixture
